@@ -1,0 +1,1068 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AI Readiness Assessment — Heuriskien (v3 + Supabase)</title>
+<style>
+  :root{
+    --bg:#0c1220; --card:#0e152a; --primary:#1f62e4; --primary-700:#174fc0;
+    --muted:#9aa4b2; --text:#e7ebf0; --ok:#138a4b; --warn:#b57b0b; --bad:#c33333;
+    --border:#1f2b44; --gradient:linear-gradient(180deg,#0c1220 0%,#070b15 100%);
+    --brand-text:#e7ebf0;
+  }
+  body[data-theme="emerald"]{--bg:#06130f;--card:#0a1f18;--primary:#10b981;--primary-700:#059669;--gradient:linear-gradient(180deg,#06130f,#03100c)}
+  body[data-theme="amber"]{--bg:#1a1202;--card:#221a06;--primary:#f59e0b;--primary-700:#d97706;--gradient:linear-gradient(180deg,#1a1202,#0b0700)}
+  body[data-theme="carbon"]{--bg:#0b0b0c;--card:#121213;--primary:#6b7280;--primary-700:#4b5563;--gradient:linear-gradient(180deg,#0b0b0c,#000)}
+
+  *{box-sizing:border-box}
+  body{ margin:0; background:var(--gradient); color:var(--text); font:14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial }
+  .container{ max-width:1140px; margin: 28px auto; padding: 0 16px; }
+
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    background:linear-gradient(180deg,rgba(10,14,25,.95),rgba(10,14,25,.75));
+    border-bottom:1px solid var(--border); backdrop-filter: blur(12px);
+    padding:10px 0; margin-bottom:12px;
+  }
+  .topbar-inner{ display:flex; align-items:center; gap:16px; justify-content:space-between }
+  .brand{ display:flex; gap:10px; align-items:center; user-select:none }
+  .brand-badge{ width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,var(--primary),#22d3ee);
+    display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px rgba(31,98,228,.35); color:#fff; font-weight:800; font-size:14px }
+  .brand-name{ font-weight:800; letter-spacing:.2px; color:var(--brand-text) }
+
+  .progress-wrap{ display:flex; gap:12px; align-items:center; flex:1 }
+  .progress{ height:10px; background:#0b1226; border:1px solid var(--border); border-radius:999px; overflow:hidden; flex:1 }
+  .progress>span{ display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--primary),#22d3ee); transition:width .35s ease }
+
+  .controls{ display:flex; gap:10px; align-items:center }
+  .badge{ display:inline-block; border:1px solid var(--border); color:#cbd5e1; background:#0b1226; padding:3px 8px; border-radius:999px; font-size:12px }
+  .pillars-tabs{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px }
+  .pill{ padding:6px 10px; border-radius:999px; border:1px solid var(--border); color:#cbd5e1; font-size:12px; transition:all .2s }
+  .pill.active{ border-color:var(--primary); color:#fff; transform:translateY(-1px) }
+
+  header{ margin-bottom:12px }
+  header h1{ margin:0 0 6px; font-size:28px }
+  header p{ margin:0; color:var(--muted) }
+
+  .card{
+    background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:14px; padding:18px;
+    backdrop-filter: blur(6px); transition: transform .25s ease, box-shadow .25s ease;
+  }
+  .card:hover{ transform: translateY(-1px); box-shadow: 0 8px 28px rgba(0,0,0,.22) }
+
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+  .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px }
+  @media (max-width:900px){ .grid-2,.grid-3{ grid-template-columns:1fr } }
+
+  label{ display:block; font-weight:600; margin-bottom:6px }
+  input[type="text"], input[type="email"], select, textarea{
+    width:100%; background:#0a0f1f; border:1px solid var(--border); color:var(--text);
+    border-radius:9px; padding:10px 12px; outline:none; transition:border-color .2s;
+  }
+  input:focus, select:focus, textarea:focus{ border-color:var(--primary) }
+
+  fieldset{ border:1px solid var(--border); border-radius:12px; padding:16px; margin:16px 0 }
+  legend{ padding:0 6px; color:#cbd5e1; font-weight:700 }
+  .q{ padding:12px; border:1px dashed #243146; border-radius:10px; margin-bottom:10px; background:rgba(37,99,235,.05); transition: background .2s }
+  .q:hover{ background:rgba(37,99,235,.07) }
+  .q-title{ font-weight:600; margin-bottom:8px }
+  .scale{ display:flex; flex-wrap:wrap; gap:10px; align-items:center }
+
+  .btn{ appearance:none; border:none; border-radius:10px; padding:10px 14px; font-weight:700; cursor:pointer; color:#fff; background:var(--primary); transition: transform .08s ease, background .2s ease }
+  .btn:hover{ background:var(--primary-700) }
+  .btn:active{ transform: translateY(1px) }
+  .btn.secondary{ background:#0a0f1f; border:1px solid var(--border); color:#cbd5e1 }
+  .btn.ghost{ background:transparent; border:1px solid var(--border); color:#cbd5e1 }
+
+  .nav{ display:flex; gap:10px; justify-content:flex-end; margin-top:10px }
+
+  .muted{ color:var(--muted) }
+  .results{ margin-top:16px }
+  table{ width:100%; border-collapse:collapse; margin-top:8px; border:1px solid var(--border) }
+  th,td{ padding:8px 10px; border-bottom:1px solid var(--border); text-align:left }
+  th{ background:#0b1226 }
+  .ok{ color:var(--ok) } .warn{ color:var(--warn) } .bad{ color:var(--bad) }
+  .footer-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px }
+  .hint{ font-size:12px; color:var(--muted) }
+
+  .info-inline{ display:inline-flex; align-items:center; gap:6px }
+  .i-info{ display:inline-flex; width:18px; height:18px; border-radius:999px; background:var(--primary); color:#fff; align-items:center; justify-content:center; font-size:12px; cursor:help }
+
+  .modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:50 }
+  .modal.open{ display:flex; align-items:flex-start; justify-content:center; padding-top:60px }
+  .modal-card{ background:#fff; color:#111; border-radius:10px; padding:16px; width:min(700px,94vw); box-shadow:0 16px 40px rgba(0,0,0,.35) }
+  .modal-card h3{ margin:6px 0 8px }
+  .modal-card table{ width:100%; border-collapse:collapse; margin-top:8px; border:1px solid #e5e7eb }
+  .modal-card th,.modal-card td{ padding:8px 10px; border-bottom:1px solid #e5e7eb; text-align:left }
+
+  .pagebreak{ page-break-after: always }
+  .reveal{ opacity:0; transform: translateY(8px); transition: opacity .6s ease, transform .6s ease }
+  .reveal.in{ opacity:1; transform: translateY(0) }
+
+  @media print{
+    body{ background:#fff; color:#000 }
+    .topbar, header, #form, .card:first-of-type, .footer-actions .btn:not(#btnPrint){ display:none !important }
+    #resultSec{ border:none }
+    #report, #reportExecutive{ color:#000 }
+    #report h1, #report h2, #report h3, #reportExecutive h1, #reportExecutive h2, #reportExecutive h3{ color:#000 !important }
+    a{ color:#000 !important; text-decoration:none }
+  }
+</style>
+</head>
+<body data-theme="">
+<!-- Topbar -->
+<div class="topbar">
+  <div class="container topbar-inner">
+    <div class="brand">
+      <div class="brand-badge">H</div>
+      <div class="brand-name">Heuriskien — AI Readiness</div>
+    </div>
+    <div class="progress-wrap">
+      <div style="min-width:230px">
+        <div class="badge">25 questões · 5 pilares</div>
+        <div class="pillars-tabs" id="pillTabs"></div>
+      </div>
+      <div class="progress" aria-label="Progresso"><span id="pg"></span></div>
+      <div class="controls" style="min-width:420px">
+        <span id="answered" class="badge">0/25 respondidas</span>
+        <select id="tema" title="Tema">
+          <option value="">Tema: Corporate Blue (padrão)</option>
+          <option value="emerald">Tema: Emerald</option>
+          <option value="amber">Tema: Amber</option>
+          <option value="carbon">Tema: Carbon</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <header class="reveal in">
+    <h1>Diagnóstico de Prontidão em IA</h1>
+    <p class="muted">Avalie sua prontidão em 5 pilares: Estratégia, Dados, Tecnologia, Processos e Pessoas. Escala 0–3.</p>
+  </header>
+
+  <!-- Identificação + Setor + Pesos por setor -->
+  <section class="card reveal">
+    <div class="grid-3">
+      <div>
+        <label class="info-inline" for="setor">Setor
+          <span class="i-info" title="O Setor ajusta os pesos dos pilares para refletir características da indústria.">i</span>
+          <button type="button" id="btnWeights" class="btn ghost" style="padding:4px 8px; font-size:12px">Ver pesos</button>
+        </label>
+        <select id="setor" required>
+          <option value="">Selecione...</option>
+          <option value="agro">Agronegócio</option>
+          <option value="industria">Indústria / Manufatura</option>
+          <option value="varejo_moda">Varejo — Moda</option>
+          <option value="varejo_alimentos">Varejo — Alimentos</option>
+          <option value="varejo_farma">Varejo — Farma</option>
+          <option value="atacado_distribuicao">Atacado / Distribuição</option>
+          <option value="logistica_transporte">Logística / Transporte</option>
+          <option value="saude">Saúde</option>
+          <option value="financeiro_bancos">Financeiro — Bancos</option>
+          <option value="seguros">Seguros</option>
+          <option value="telecom">Telecomunicações</option>
+          <option value="midia_entretenimento">Mídia & Entretenimento</option>
+          <option value="educacao">Educação</option>
+          <option value="governo">Governo / Setor Público</option>
+          <option value="energia_utilities">Energia & Utilities</option>
+          <option value="oleo_gas">Óleo & Gás</option>
+          <option value="construcao_engenharia">Construção & Engenharia</option>
+          <option value="imobiliario">Imobiliário</option>
+          <option value="tecnologia_saas">Tecnologia / SaaS</option>
+          <option value="turismo_hotelaria">Turismo & Hotelaria</option>
+          <option value="food_service">Alimentação fora do lar (Food Service)</option>
+          <option value="automotivo">Automotivo</option>
+          <option value="quimico_farmaceutico">Químico & Farmacêutico</option>
+          <option value="mineracao">Mineração</option>
+          <option value="saneamento">Saneamento</option>
+          <option value="terceiro_setor">Terceiro Setor (ONGs)</option>
+          <option value="servicos_profissionais">Serviços profissionais (Consultoria, Advocacia, Contábil)</option>
+        </select>
+        <div class="hint">Os pesos afetam o score máximo e o % por pilar para refletir a realidade do setor.</div>
+      </div>
+      <div>
+        <label for="segmento">Segmento (opcional)</label>
+        <input id="segmento" type="text" placeholder="Subsegmento, ex.: fast-fashion, specialty, B2B, etc." />
+      </div>
+      <div>
+        <label for="porte">Porte da empresa</label>
+        <select id="porte" required>
+          <option value="">Selecione...</option>
+          <option>Até 50 colaboradores</option>
+          <option>51–200</option>
+          <option>201–1.000</option>
+          <option>1.001–5.000</option>
+          <option>5.001+</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:12px">
+      <div>
+        <label for="nome">Nome</label>
+        <input id="nome" type="text" placeholder="Seu nome" required />
+      </div>
+      <div>
+        <label for="email">E-mail corporativo</label>
+        <input id="email" type="email" placeholder="nome.sobrenome@empresa.com.br" required />
+        <div class="hint">Apenas e-mails corporativos são aceitos (ex.: @empresa.com).</div>
+      </div>
+      <div>
+        <label for="empresa">Empresa</label>
+        <input id="empresa" type="text" placeholder="Nome da empresa" required />
+      </div>
+      <div>
+        <label for="obs">Descreva o principal desafio atual relacionado a IA ou processos</label>
+        <textarea id="obs" rows="2" minlength="10" placeholder="Ex.: alta dependência de planilhas, dados desatualizados, falta de KPIs, gargalos no abastecimento/planejamento, etc."></textarea>
+      </div>
+
+      <!-- Consentimento LGPD -->
+      <div style="grid-column: 1 / -1; margin-top:6px">
+        <label style="display:flex; gap:8px; align-items:center">
+          <input type="checkbox" id="consent" />
+          <span>Concordo em ser contatado(a) sobre este diagnóstico (LGPD).</span>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <!-- Formulário dinâmico -->
+  <form id="form" class="card reveal" style="margin-top:14px"></form>
+
+  <!-- Resultados + Relatório -->
+  <section id="resultSec" class="card reveal" style="margin-top:14px; display:none">
+    <h2 style="margin-top:0">Resultado</h2>
+    <div id="summary"></div>
+
+    <div class="results">
+      <table id="tbl">
+        <thead>
+          <tr><th>Pilar</th><th>Score</th><th>Máx.</th><th>%</th></tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr><th>Total</th><th id="tScore">0</th><th id="tMax">0</th><th id="tPct">0%</th></tr>
+        </tfoot>
+      </table>
+
+      <div id="charts" class="grid-2" style="margin-top:12px">
+        <div class="card" style="background:#0a0f1f; border-color:#172136">
+          <h3 style="margin:0 0 8px">Radar — % por Pilar</h3>
+          <canvas id="radarChart" height="240"></canvas>
+        </div>
+        <div class="card" style="background:#0a0f1f; border-color:#172136">
+          <h3 style="margin:0 0 8px">Barras — % por Pilar</h3>
+          <canvas id="barChart" height="240"></canvas>
+        </div>
+      </div>
+
+      <!-- Relatório consultivo (PDF Completo) -->
+      <div id="report" style="background:white; color:black; padding:18px; margin-top:14px; border-radius:8px"></div>
+
+      <!-- Executive 1-Pager -->
+      <div id="reportExecutive" style="display:none; background:white; color:black; padding:18px; margin-top:14px; border-radius:8px"></div>
+    </div>
+
+    <div class="footer-actions">
+      <button class="btn" id="btnPDF" type="button">Exportar PDF (Completo)</button>
+      <button class="btn" id="btnPDF1" type="button">Exportar PDF (1‑Pager)</button>
+      <button class="btn secondary" id="btnPrint" type="button">Imprimir / Salvar PDF</button>
+      <button class="btn secondary" id="btnCSV" type="button">Exportar CSV</button>
+      <button class="btn secondary" id="btnJSON" type="button">Exportar JSON</button>
+      <button class="btn" id="btnLead" type="button">Registrar Lead (Supabase)</button>
+      <button class="btn ghost" id="btnReset" type="button">Limpar respostas</button>
+    </div>
+  </section>
+</div>
+
+<!-- Modal pesos -->
+<div class="modal" id="weightsModal" aria-hidden="true" role="dialog">
+  <div class="modal-card">
+    <div style="display:flex; justify-content:space-between; align-items:center">
+      <h3>Matriz de Pesos por Pilar</h3>
+      <button class="btn ghost" type="button" id="closeWeights" style="color:#111; border-color:#e5e7eb">Fechar</button>
+    </div>
+    <div id="weightsContent"></div>
+  </div>
+</div>
+
+<!-- CDNs corretas -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  /* Substitua caso necessário */
+  const SUPABASE_URL = "https://nqdlxiyzsxkntypyzkie.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xZGx4aXl6c3hrbnR5cHl6a2llIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NjY1ODIsImV4cCI6MjA4NzU0MjU4Mn0.8npxzHMR3VdaufiqmsJKdLR2zpXDOFzDldFwdth18f0";
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
+
+<script>
+/* ==================== Configuração ==================== */
+const PILLARS = [
+  { key:"estrategia", title:"Estratégia e Governança", questions:[
+    "A empresa possui uma visão clara sobre o uso de IA nos próximos anos?",
+    "A liderança (C-level / diretoria) apoia iniciativas de IA de forma ativa e contínua?",
+    "Existe orçamento dedicado a projetos de dados, automação ou IA?",
+    "Existe governança formal para projetos de tecnologia (priorização, guarda-chuva, dono)?",
+    "Há políticas definidas para uso seguro e ético de IA? (LGPD, privacidade, responsabilidade, etc.)"
+  ]},
+  { key:"dados", title:"Dados", questions:[
+    "Os dados da empresa são acessíveis para as áreas que precisam usar?",
+    "A qualidade dos dados é consistente (sem duplicidades, erros, inconsistências)?",
+    "A empresa possui processos de governança de dados (dicionário, dono do dado, regras)?",
+    "Os dados são atualizados com frequência e capturados de forma confiável?",
+    "Existe integração entre bases de dados (ERP, CRM, sistemas operacionais, planilhas)?"
+  ]},
+  { key:"tecnologia", title:"Tecnologia e Ferramentas", questions:[
+    "A empresa utiliza sistemas modernos e integráveis (API-friendly, cloud, arquitetura modular)?",
+    "Existe infraestrutura em nuvem ou híbrida para suportar projetos de IA?",
+    "Há ferramentas de BI, dashboards ou análises automatizadas em uso?",
+    "A empresa já utiliza algum tipo de automação (RPA, scripts, workflows)?",
+    "Os sistemas atuais (ERP, TOTVS, Oracle Retail, etc.) suportam integrações para IA?"
+  ]},
+  { key:"processos", title:"Processos e Operações", questions:[
+    "Os processos internos são documentados e padronizados?",
+    "As equipes seguem processos com consistência, sem variações excessivas?",
+    "Há métricas (KPIs) bem definidas e monitoradas na operação?",
+    "Existe clara definição de onde estão os gargalos e ineficiências operacionais?",
+    "A empresa já executa projetos de melhoria contínua ou transformação digital?"
+  ]},
+  { key:"pessoas", title:"Pessoas e Cultura", questions:[
+    "Os times têm abertura e receptividade para adotar novas tecnologias?",
+    "As pessoas entendem os benefícios práticos da IA para o seu trabalho?",
+    "Há profissionais com habilidades em dados, automação ou tecnologia?",
+    "Existe capacitação ou treinamentos internos relacionados a dados/IA?",
+    "A cultura da empresa incentiva experimentação, inovação e testes rápidos?"
+  ]}
+];
+
+const WEIGHT_PRESETS_SECTOR = {
+  agro:{estrategia:1.0,dados:1.2,tecnologia:1.1,processos:1.2,pessoas:1.0},
+  industria:{estrategia:1.0,dados:1.2,tecnologia:1.3,processos:1.3,pessoas:1.0},
+  varejo_moda:{estrategia:1.0,dados:1.3,tecnologia:1.3,processos:1.1,pessoas:1.0},
+  varejo_alimentos:{estrategia:1.0,dados:1.3,tecnologia:1.2,processos:1.2,pessoas:1.0},
+  varejo_farma:{estrategia:1.1,dados:1.3,tecnologia:1.2,processos:1.2,pessoas:1.0},
+  atacado_distribuicao:{estrategia:1.0,dados:1.2,tecnologia:1.2,processos:1.3,pessoas:1.0},
+  logistica_transporte:{estrategia:1.0,dados:1.2,tecnologia:1.3,processos:1.3,pessoas:1.0},
+  saude:{estrategia:1.2,dados:1.3,tecnologia:1.2,processos:1.1,pessoas:1.0},
+  financeiro_bancos:{estrategia:1.2,dados:1.3,tecnologia:1.3,processos:1.1,pessoas:1.0},
+  seguros:{estrategia:1.1,dados:1.3,tecnologia:1.2,processos:1.1,pessoas:1.0},
+  telecom:{estrategia:1.0,dados:1.3,tecnologia:1.3,processos:1.1,pessoas:1.0},
+  midia_entretenimento:{estrategia:1.0,dados:1.2,tecnologia:1.2,processos:1.0,pessoas:1.2},
+  educacao:{estrategia:1.1,dados:1.2,tecnologia:1.1,processos:1.0,pessoas:1.3},
+  governo:{estrategia:1.2,dados:1.2,tecnologia:1.1,processos:1.2,pessoas:1.0},
+  energia_utilities:{estrategia:1.1,dados:1.3,tecnologia:1.2,processos:1.3,pessoas:1.0},
+  oleo_gas:{estrategia:1.2,dados:1.2,tecnologia:1.3,processos:1.3,pessoas:1.0},
+  construcao_engenharia:{estrategia:1.1,dados:1.1,tecnologia:1.2,processos:1.3,pessoas:1.0},
+  imobiliario:{estrategia:1.1,dados:1.1,tecnologia:1.1,processos:1.2,pessoas:1.1},
+  tecnologia_saas:{estrategia:1.0,dados:1.2,tecnologia:1.3,processos:1.1,pessoas:1.2},
+  turismo_hotelaria:{estrategia:1.0,dados:1.1,tecnologia:1.1,processos:1.2,pessoas:1.3},
+  food_service:{estrategia:1.0,dados:1.2,tecnologia:1.1,processos:1.3,pessoas:1.0},
+  automotivo:{estrategia:1.1,dados:1.2,tecnologia:1.3,processos:1.2,pessoas:1.0},
+  quimico_farmaceutico:{estrategia:1.2,dados:1.3,tecnologia:1.2,processos:1.2,pessoas:1.0},
+  mineracao:{estrategia:1.1,dados:1.2,tecnologia:1.2,processos:1.3,pessoas:1.0},
+  saneamento:{estrategia:1.2,dados:1.2,tecnologia:1.1,processos:1.3,pessoas:1.0},
+  terceiro_setor:{estrategia:1.1,dados:1.1,tecnologia:1.0,processos:1.0,pessoas:1.3},
+  servicos_profissionais:{estrategia:1.2,dados:1.1,tecnologia:1.1,processos:1.1,pessoas:1.2},
+};
+
+const BENCHMARKS = {
+  default:{estrategia:60,dados:58,tecnologia:60,processos:62,pessoas:64},
+  varejo_moda:{estrategia:58,dados:55,tecnologia:57,processos:60,pessoas:62},
+  industria:{estrategia:60,dados:60,tecnologia:63,processos:65,pessoas:61},
+  financeiro_bancos:{estrategia:65,dados:66,tecnologia:65,processos:62,pessoas:60},
+  saude:{estrategia:62,dados:63,tecnologia:60,processos:58,pessoas:60},
+  tecnologia_saas:{estrategia:62,dados:62,tecnologia:66,processos:61,pessoas:65},
+  governo:{estrategia:60,dados:58,tecnologia:57,processos:60,pessoas:58}
+};
+function porteAdj(porteText){
+  if(!porteText) return 0;
+  const p=porteText.toLowerCase();
+  if(p.includes('até 50')) return -5;
+  if(p.includes('51–200')) return -2;
+  if(p.includes('201–1.000')) return 0;
+  if(p.includes('1.001–5.000')) return +3;
+  if(p.includes('5.001')) return +5;
+  return 0;
+}
+
+const ROADMAP_SECTOR = {
+  varejo_moda:{
+    days90:[ "Quick wins em automação de rotinas comerciais e planejamento.",
+             "Organizar dados mestres (SKU, hierarquias, calendário promocional) e acessos.",
+             "Mapear casos para previsão de demanda e alocação inicial." ],
+    m6:[ "Pilotos de previsão de demanda e alocação integrados ao ERP/OMS.",
+         "Padronização de KPIs (precisão de forecast, ruptura, giro).",
+         "Arquitetura de dados para catálogos, estoque e sell-thru." ],
+    m12:[ "Escala de casos vencedores (forecast + alocação) com MLOps.",
+          "Integração profunda com ERP/retail stack e governança de IA.",
+          "Squad dedicado para expansão de casos (assortment, pricing)." ]
+  },
+  financeiro_bancos:{
+    days90:[ "Mapeamento de dados críticos (transacionais, KYC) e governança.",
+             "Quick wins em automação de controles e relatórios regulatórios.",
+             "Definição de política de IA (ética, risco, privacy-by-design)." ],
+    m6:[ "Pilotos de detecção de anomalias e next-best-action.",
+         "Integração segura com APIs e trilha de auditoria.",
+         "KPIs de valor: redução de fraudes e melhoria de conversão." ],
+    m12:[ "Escala de modelos com MLOps e explainability.",
+          "Catálogo de features, lineage e monitoração contínua.",
+          "Expansão para crédito, atendimento e compliance." ]
+  },
+  industria:{
+    days90:[ "Padronização de processos e coleta de dados de chão de fábrica.",
+             "Quick wins em manutenção e qualidade (checklists inteligentes).",
+             "Plano de integração OT/IT e conectividade (APIs/IoT)." ],
+    m6:[ "Pilotos de manutenção preditiva e otimização de produção.",
+         "KPIs de OEE e redução de paradas.",
+         "Arquitetura de dados industrial (historiadores, Lake)." ],
+    m12:[ "MLOps industrial e escala dos modelos preditivos.",
+          "Governança de IA aplicada a segurança e compliance.",
+          "Digital twin e otimização ponta-a-ponta." ]
+  }
+};
+const ROADMAP_GENERIC = {
+  days90:["Diagnóstico aprofundado nos pilares mais fracos e plano de ação.",
+          "Organização de dados críticos, acessos, qualidade e quick wins de automação.",
+          "Definição de governança mínima (papéis, priorização, política de IA)."],
+  m6:["2–3 pilotos integrados (APIs/ERP/CRM) com medição de ROI.",
+      "Padronização de processos e KPIs; automações estáveis.",
+      "Arquitetura cloud e base de dados para escalar IA."],
+  m12:["Escala dos casos vencedores + MLOps completo (monitoramento, versionamento, CI/CD).",
+       "Governança de IA ampliada (ética, privacidade, auditoria).",
+       "Formação/expansão de squad interno de IA e trilhas de capacitação."]
+};
+
+const OPPORTUNITIES = {
+  varejo_moda:[
+    { name:"Previsão de Demanda", impact:90, pillars:["dados","tecnologia","processos"] },
+    { name:"Alocação Inicial", impact:80, pillars:["dados","processos"] },
+    { name:"Assistente de Compras", impact:70, pillars:["pessoas","estrategia","dados"] },
+    { name:"Detecção de Ruptura", impact:75, pillars:["dados","processos"] }
+  ],
+  industria:[
+    { name:"Manutenção Preditiva", impact:85, pillars:["dados","tecnologia","processos"] },
+    { name:"Qualidade Assistida", impact:75, pillars:["dados","processos"] },
+    { name:"Otimização de Produção", impact:80, pillars:["tecnologia","processos"] }
+  ],
+  financeiro_bancos:[
+    { name:"Detecção de Fraudes", impact:90, pillars:["dados","tecnologia"] },
+    { name:"Next Best Action", impact:80, pillars:["dados","processos"] },
+    { name:"Automação Regulatória", impact:70, pillars:["processos","estrategia"] }
+  ]
+};
+
+/* ==================== Estado & Helpers ==================== */
+let currentSection=0, answers={}, setor='', tema='';
+let radarInstance=null, barInstance=null, scatterInstance=null;
+
+const $=(sel,root=document)=> root.querySelector(sel);
+const $$=(sel,root=document)=> Array.from(root.querySelectorAll(sel));
+
+$('#tema').addEventListener('change',(e)=>{
+  tema = e.target.value || '';
+  document.body.setAttribute('data-theme', tema);
+  saveDraft();
+});
+
+function renderPillTabs(){
+  const cont=$('#pillTabs'); cont.innerHTML='';
+  PILLARS.forEach((p,i)=>{
+    const el=document.createElement('span');
+    el.className='pill'+(i===currentSection?' active':'');
+    el.textContent=p.title.split(' ')[0];
+    el.title=p.title;
+    el.onclick=()=> goToSection(i);
+    cont.appendChild(el);
+  });
+}
+
+function buildForm(){
+  const form=$('#form'); form.innerHTML='';
+  let qIndex=1;
+  PILLARS.forEach((pillar,pIdx)=>{
+    const fs=document.createElement('fieldset'); fs.dataset.section=pIdx; fs.classList.add('reveal');
+    const lg=document.createElement('legend'); lg.textContent=`Pilar: ${pillar.title}`; fs.appendChild(lg);
+
+    const help=document.createElement('div'); help.className='muted'; help.style.marginBottom='8px';
+    help.textContent='Avalie de 0 a 3 — 0: Não existe | 1: Muito pouco | 2: Parcial | 3: Forte';
+    fs.appendChild(help);
+
+    pillar.questions.forEach(qText=>{
+      const qId=`Q${String(qIndex).padStart(2,'0')}`;
+      const wrap=document.createElement('div'); wrap.className='q';
+      const title=document.createElement('div'); title.className='q-title'; title.textContent=`${qId}. ${qText}`; wrap.appendChild(title);
+
+      const scale=document.createElement('div'); scale.className='scale';
+      ['0 — Não existe','1 — Muito pouco','2 — Parcial','3 — Forte'].forEach((label,val)=>{
+        const id=`${qId}_${val}`;
+        const r=document.createElement('input'); r.type='radio'; r.name=qId; r.id=id; r.value=String(val); r.required=true;
+        r.onchange=()=>{ answers[qId]=Number(r.value); computeProgress(); saveDraft(); };
+        const l=document.createElement('label'); l.htmlFor=id; l.style.fontWeight='normal'; l.style.marginRight='8px'; l.textContent=label;
+        scale.appendChild(r); scale.appendChild(l);
+      });
+      wrap.appendChild(scale);
+      fs.appendChild(wrap);
+      qIndex++;
+    });
+
+    const nav=document.createElement('div'); nav.className='nav';
+    const prev=document.createElement('button'); prev.type='button'; prev.className='btn secondary'; prev.textContent='◀ Voltar'; prev.onclick=()=> goPrev();
+    const next=document.createElement('button'); next.type='button'; next.className='btn'; next.textContent=(pIdx===PILLARS.length-1)?'Calcular Score ▶':'Avançar ▶';
+    next.onclick=()=> (pIdx===PILLARS.length-1 ? computeResults() : goNext());
+    nav.appendChild(prev); nav.appendChild(next);
+    fs.appendChild(nav);
+
+    form.appendChild(fs);
+  });
+  showOnlySection(0);
+  renderPillTabs();
+  computeProgress();
+  loadDraft();
+  setupReveal();
+}
+
+/* ====== Seções & Validação ====== */
+/* PATCH: rolar até o início do FIELDSET atual (melhor UX) */
+function showOnlySection(idx){
+  currentSection = idx;
+  $$('#form fieldset').forEach((fs,i)=> fs.style.display=(i===idx ? 'block' : 'none'));
+  renderPillTabs();
+
+  const currentFs = $$('#form fieldset')[idx] || $('#form');
+  const y = currentFs.getBoundingClientRect().top + window.scrollY - 12;
+  window.scrollTo({ top:y, behavior:'smooth' });
+}
+function goToSection(idx){ if(!validateSection(currentSection)) return; showOnlySection(idx); }
+function goPrev(){ if(currentSection>0){ showOnlySection(currentSection-1); } }
+function goNext(){ if(!validateSection(currentSection)) return; if(currentSection<PILLARS.length-1){ showOnlySection(currentSection+1); } }
+
+function validateSection(secIdx){
+  const fs=$$('fieldset')[secIdx];
+  const radios = $$('input[type="radio"]', fs);
+  const groups = [...new Set(radios.map(r=>r.name))];
+  const missing = groups.filter(g => !$$(`input[name="${g}"]:checked`, fs).length);
+  if(missing.length){ alert('Por favor, responda todas as questões desta seção antes de avançar.'); return false; }
+  return true;
+}
+
+/* ====== Progresso ====== */
+function computeProgress(){
+  const total=25;
+  const answeredCount = Object.values(answers).filter(v => [0,1,2,3].includes(v)).length;
+  $('#answered').textContent = `${answeredCount}/${total} respondidas`;
+  $('#pg').style.width = Math.round((answeredCount/total)*100) + '%';
+}
+
+/* ====== Pesos por Setor ====== */
+$('#setor').addEventListener('change',(e)=>{ setor = e.target.value || ''; saveDraft(); });
+function getQuestionWeight(qId){
+  const qNum=Number(qId.replace('Q',''));
+  let pKey='estrategia';
+  if(qNum>=6 && qNum<=10) pKey='dados';
+  else if(qNum>=11 && qNum<=15) pKey='tecnologia';
+  else if(qNum>=16 && qNum<=20) pKey='processos';
+  else if(qNum>=21 && qNum<=25) pKey='pessoas';
+  const preset=WEIGHT_PRESETS_SECTOR[setor];
+  return preset?.[pKey] ?? 1.0;
+}
+
+/* ====== Validação de e-mail corporativo ====== */
+function isCorporateEmail(email){
+  const commonFree=new Set(["gmail.com","hotmail.com","outlook.com","yahoo.com","icloud.com","aol.com","bol.com.br","uol.com.br","live.com","msn.com","proton.me","protonmail.com","zoho.com","gmx.com","mail.com"]);
+  if(!email || !email.includes('@')) return false;
+  const domain=email.split('@')[1].toLowerCase();
+  if(commonFree.has(domain)) return false;
+  return /\w+\.[a-z]{2,}$/i.test(domain);
+}
+
+/* ====== Cálculo, Gráficos e Relatórios ====== */
+function computeResults(){
+  for(let s=0; s<PILLARS.length; s++){ if(!validateSection(s)){ showOnlySection(s); return; } }
+
+  const req=['#nome','#email','#empresa','#porte','#setor'];
+  for(const sel of req){ if(!$(sel).value){ alert('Preencha Nome, E-mail, Empresa, Porte e Setor.'); return; } }
+  const email=$('#email').value.trim();
+  if(!isCorporateEmail(email)){ alert('Por favor, utilize seu e-mail corporativo (não aceitamos domínios pessoais).'); return; }
+  if($('#obs').value && $('#obs').value.trim().length>0 && $('#obs').value.trim().length<10){ alert('Por favor, descreva melhor o desafio (mínimo 10 caracteres).'); return; }
+
+  const perPillar=[
+    {key:'estrategia', title:'Estratégia e Governança', range:[1,5]},
+    {key:'dados',      title:'Dados',                   range:[6,10]},
+    {key:'tecnologia', title:'Tecnologia e Ferramentas',range:[11,15]},
+    {key:'processos',  title:'Processos e Operações',   range:[16,20]},
+    {key:'pessoas',    title:'Pessoas e Cultura',       range:[21,25]}
+  ];
+
+  let totalScore=0, totalMax=0;
+  const rows=[];
+  perPillar.forEach(p=>{
+    let score=0, max=0;
+    for(let i=p.range[0]; i<=p.range[1]; i++){
+      const qId=`Q${String(i).padStart(2,'0')}`;
+      const val=Number(answers[qId] ?? 0);
+      const w=getQuestionWeight(qId);
+      score += val*w; max += 3*w;
+    }
+    totalScore += score; totalMax += max;
+    rows.push({ pillar:p.title, key:p.key, score, max, pct:(max>0? (score/max):0) });
+  });
+
+  // Tabela
+  const tbody=$('#tbl tbody'); tbody.innerHTML='';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${r.pillar}</td><td>${r.score.toFixed(2)}</td><td>${r.max.toFixed(2)}</td><td>${(r.pct*100).toFixed(0)}%</td>`;
+    tbody.appendChild(tr);
+  });
+  $('#tScore').textContent = totalScore.toFixed(2);
+  $('#tMax').textContent = totalMax.toFixed(2);
+  const totalPct = totalMax>0 ? (totalScore/totalMax) : 0;
+  $('#tPct').textContent = (totalPct*100).toFixed(0)+'%';
+
+  const score100=Math.round(totalPct*100);
+  const level = (score100<31) ? 'Nível 1 — Abertura, mas pouca estrutura'
+              : (score100<61) ? 'Nível 2 — Capacidade operacional moderada'
+              : (score100<81) ? 'Nível 3 — Estrutura razoável de dados/tech'
+              : 'Nível 4 — Alta prontidão para IA aplicada';
+
+  drawCharts(rows);
+  generateReport(rows, score100, level);
+  generateExecutive1Pager(rows, score100, level);
+
+  $('#resultSec').style.display='block';
+  saveDraft();
+  $('#resultSec').scrollIntoView({behavior:'smooth'});
+
+  // Guarda últimos resultados (para Supabase)
+  window.__lastResults = {
+    rows, score100, level,
+    setorKey: $('#setor').value || 'default',
+    setorLabel: $('#setor').selectedOptions[0]?.text || '',
+    porte: $('#porte').value,
+    pesos: WEIGHT_PRESETS_SECTOR[$('#setor').value] || {estrategia:1,dados:1,tecnologia:1,processos:1,pessoas:1},
+    benchmark: getBenchmarksFor($('#setor').value || 'default', $('#porte').value),
+    indices:(()=>{ const pcts={}; rows.forEach(r=>pcts[r.key]=Math.round(r.pct*100)); return strategicIndexes(pcts); })()
+  };
+}
+
+/* ====== Gráficos ====== */
+function drawCharts(rows){
+  const labels = rows.map(r=>r.pillar);
+  const pct    = rows.map(r=>Math.round(r.pct*100));
+
+  const radarCtx = $('#radarChart').getContext('2d');
+  if(radarInstance) radarInstance.destroy();
+  radarInstance = new Chart(radarCtx,{
+    type:'radar',
+    data:{ labels, datasets:[{ label:'Percentual por Pilar', data:pct, fill:true, backgroundColor:'rgba(31,98,228,.25)', borderColor:'rgba(31,98,228,.9)', pointBackgroundColor:'rgba(31,98,228,1)'}]},
+    options:{ responsive:true, scales:{ r:{ angleLines:{color:'#1f2b44'}, grid:{color:'#1f2b44'}, suggestedMin:0, suggestedMax:100, ticks:{color:'#ccd3dd'}, pointLabels:{color:'#ccd3dd'} } },
+              plugins:{ legend:{ labels:{ color:'#dbe1ea' } } } }
+  });
+
+  const barCtx = $('#barChart').getContext('2d');
+  if(barInstance) barInstance.destroy();
+  barInstance = new Chart(barCtx,{
+    type:'bar',
+    data:{ labels, datasets:[{ label:'% por Pilar', data:pct, backgroundColor:'rgba(31,98,228,.75)'}]},
+    options:{ responsive:true, scales:{ x:{ticks:{color:'#dbe1ea'}, grid:{color:'#1f2b44'}}, y:{ticks:{color:'#dbe1ea'}, grid:{color:'#1f2b44'}, suggestedMin:0, suggestedMax:100} },
+              plugins:{ legend:{ labels:{ color:'#dbe1ea' } } } }
+  });
+}
+
+/* ====== Benchmarks & Índices ====== */
+function getBenchmarksFor(setorKey, porteText){
+  const base = BENCHMARKS[setorKey] || BENCHMARKS.default;
+  const adj = porteAdj(porteText);
+  return {
+    estrategia: clamp(base.estrategia+adj),
+    dados:      clamp(base.dados+adj),
+    tecnologia: clamp(base.tecnologia+adj),
+    processos:  clamp(base.processos+adj),
+    pessoas:    clamp(base.pessoas+adj)
+  };
+}
+function clamp(v){ return Math.max(30, Math.min(85, v)); }
+function strategicIndexes(pcts){
+  const risk  = 100 - (0.6*pcts.processos + 0.4*pcts.dados);
+  const roi   = 0.5*pcts.tecnologia + 0.5*pcts.processos;
+  const adopt = 0.5*pcts.pessoas + 0.5*pcts.estrategia;
+  return { risk:Math.round(risk), roi:Math.round(roi), adopt:Math.round(adopt) };
+}
+function badgeByValue(v){ if(v>=75) return {txt:`${v}% (Alto)`,cls:'ok'}; if(v>=50) return {txt:`${v}% (Médio)`,cls:'warn'}; return {txt:`${v}% (Baixo)`,cls:'bad'}; }
+
+/* ====== Opportunity Map ====== */
+function buildOpportunityMap(setorKey,pcts){
+  const list = OPPORTUNITIES[setorKey] || [
+    { name:"Piloto de Automação", impact:70, pillars:["processos","tecnologia"] },
+    { name:"Data Foundation", impact:80, pillars:["dados","estrategia"] },
+    { name:"Assistente Interno", impact:60, pillars:["pessoas","tecnologia"] }
+  ];
+  return list.map(o=>{
+    const cap = Math.round(o.pillars.reduce((a,k)=> a + (pcts[k]||0), 0) / o.pillars.length);
+    return { name:o.name, impact:o.impact, capacity:cap };
+  });
+}
+function quadrantLabel(impact,capacity){
+  const t=60;
+  if(impact>=t && capacity>=t) return 'Prioridade Máxima';
+  if(impact>=t && capacity<t)  return 'Investimento (preparar base)';
+  if(impact<t  && capacity>=t) return 'Quick Wins';
+  return 'Baixa Prioridade';
+}
+
+/* ====== Relatório Completo ====== */
+function generateReport(rows, score100, level){
+  const setorKey=$('#setor').value || 'default';
+  const setorLabel=$('#setor').selectedOptions[0]?.text || '';
+  const porteText=$('#porte').value;
+
+  const sorted=[...rows].sort((a,b)=> b.pct - a.pct);
+  const strengths=sorted.slice(0,2);
+  const gaps=sorted.slice(-2).reverse();
+
+  const pcts={}; rows.forEach(r=> pcts[r.key]=Math.round(r.pct*100));
+  const bench=getBenchmarksFor(setorKey, porteText);
+
+  const idx=strategicIndexes(pcts);
+  const idxRisk=badgeByValue(idx.risk), idxRoi=badgeByValue(idx.roi), idxAd=badgeByValue(idx.adopt);
+
+  const opps=buildOpportunityMap(setorKey,pcts);
+
+  let oppCanvas=document.getElementById('oppChart');
+  if(!oppCanvas){ oppCanvas=document.createElement('canvas'); oppCanvas.id='oppChart'; oppCanvas.height=260; }
+
+  const today=new Date().toLocaleDateString('pt-BR');
+  const brand=`<div style="display:flex; align-items:center; gap:10px">
+    <div style="width:22px; height:22px; border-radius:6px; background:linear-gradient(135deg,#1f62e4,#22d3ee);"></div>
+    <div style="font-weight:800; letter-spacing:.2px">Heuriskien — AI Readiness</div>
+  </div>`;
+
+  const strengthsHTML=strengths.map(s=> `<li><strong>${s.pillar}:</strong> ${(s.pct*100).toFixed(0)}%</li>`).join('');
+  const gapsHTML=gaps.map(s=> `<li><strong>${s.pillar}:</strong> ${(s.pct*100).toFixed(0)}%</li>`).join('');
+
+  const benchRows=[
+    {k:'estrategia', label:'Estratégia e Governança'},
+    {k:'dados',      label:'Dados'},
+    {k:'tecnologia', label:'Tecnologia e Ferramentas'},
+    {k:'processos',  label:'Processos e Operações'},
+    {k:'pessoas',    label:'Pessoas e Cultura'}
+  ].map(b=>{
+    const client=pcts[b.k]||0, ref=bench[b.k]||0, diff=client-ref, sign=diff>0?'+':'', cls=diff>=0?'ok':'bad';
+    return `<tr><td>${b.label}</td><td>${client}%</td><td>${ref}%</td><td class="${cls}">${sign}${diff}</td></tr>`;
+  }).join('');
+
+  const rw=ROADMAP_SECTOR[setorKey] || ROADMAP_GENERIC;
+  const nameByKey={estrategia:'Estratégia e Governança', dados:'Dados', tecnologia:'Tecnologia e Ferramentas', processos:'Processos e Operações', pessoas:'Pessoas e Cultura'};
+  const gapNames=gaps.map(g=> nameByKey[g.key]);
+  const addGapFocus=[`Foco em ${gapNames.join(' e ')}: diagnóstico aprofundado e plano de ação.`];
+  const r90=[...addGapFocus, ...rw.days90].map(r=>`<li>${r}</li>`).join('');
+  const r180=rw.m6.map(r=>`<li>${r}</li>`).join('');
+  const r365=rw.m12.map(r=>`<li>${r}</li>`).join('');
+
+  const report=$('#report');
+  report.innerHTML=`
+    <div style="border:1px solid #e5e7eb; border-radius:10px; padding:16px; background:linear-gradient(180deg,#f8fafc,#fff)">
+      <div style="display:flex; align-items:center; justify-content:space-between">
+        ${brand}
+        <div style="text-align:right; color:#374151; font-size:13px">
+          <div>Data: ${today}</div>
+          <div>Setor: ${setorLabel} · Porte: ${porteText}</div>
+        </div>
+      </div>
+      <h1 style="margin:10px 0 4px; font-size:26px; color:#0f172a">AI Readiness Assessment — Executive Report</h1>
+      <div style="font-size:18px; color:#334155"><strong>Empresa:</strong> ${$('#empresa').value}</div>
+      <div style="margin-top:12px; color:#475569">Este relatório apresenta o nível de prontidão em IA, forças e gaps, benchmarking setorial e um roadmap prático (90/180/365 dias), além de um mapa de oportunidades para priorização de casos com maior impacto.</div>
+    </div>
+
+    <div class="pagebreak"></div>
+
+    <h2 style="margin:14px 0 6px; font-size:18px">Resumo Executivo</h2>
+    <p style="margin:6px 0; line-height:1.6">
+      A avaliação indica um <strong>Score Geral de ${score100}</strong> (0–100), correspondente a <strong>${level}</strong>.
+      Destaques positivos em <strong>${strengths.map(s=>s.pillar).join(' e ')}</strong> e oportunidades em <strong>${gaps.map(s=>s.pillar).join(' e ')}</strong>.
+      Recomendamos priorizar ações nos próximos 90 dias nestes pilares menos maduros, preparando o terreno para pilotos integrados e escala sustentada.
+    </p>
+
+    <h2 style="margin:14px 0 6px; font-size:18px">Índices Estratégicos</h2>
+    <ul style="margin:6px 0 0 18px">
+      <li>Índice de <strong>Risco Operacional</strong> (Processos+Dados): <span class="${idxRisk.cls}"><strong>${idxRisk.txt}</strong></span></li>
+      <li>Índice de <strong>ROI Potencial</strong> (Tecnologia+Processos): <span class="${idxRoi.cls}"><strong>${idxRoi.txt}</strong></span></li>
+      <li>Índice de <strong>Adoção Cultural</strong> (Pessoas+Estratégia): <span class="${idxAd.cls}"><strong>${idxAd.txt}</strong></span></li>
+    </ul>
+
+    <h2 style="margin:14px 0 6px; font-size:18px">Forças e Oportunidades</h2>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+      <div><h3 style="margin:6px 0">Pontos Fortes</h3><ul style="margin:6px 0 0 18px">${strengthsHTML}</ul></div>
+      <div><h3 style="margin:6px 0">Principais Gaps</h3><ul style="margin:6px 0 0 18px">${gapsHTML}</ul></div>
+    </div>
+
+    <h2 style="margin:14px 0 6px; font-size:18px">Benchmark Setorial (Heurístico)</h2>
+    <p style="margin:6px 0">Comparativo com a média estimada de maturidade para empresas do seu <strong>setor</strong> e <strong>porte</strong>.</p>
+    <table style="width:100%; border:1px solid #e5e7eb; border-collapse:collapse">
+      <thead><tr style="background:#f8fafc"><th style="padding:8px 10px; border-bottom:1px solid #e5e7eb">Pilar</th><th style="padding:8px 10px; border-bottom:1px solid #e5e7eb">% Cliente</th><th style="padding:8px 10px; border-bottom:1px solid #e5e7eb">% Benchmark</th><th style="padding:8px 10px; border-bottom:1px solid #e5e7eb">Δ</th></tr></thead>
+      <tbody>${benchRows}</tbody>
+    </table>
+
+    <h2 style="margin:14px 0 6px; font-size:18px">Roadmap de Implementação</h2>
+    <h3 style="margin:6px 0">Próximos 90 dias</h3><ul style="margin:6px 0 0 18px">${r90}</ul>
+    <h3 style="margin:10px 0 0">6 meses</h3><ul style="margin:6px 0 0 18px">${r180}</ul>
+    <h3 style="margin:10px 0 0">12 meses</h3><ul style="margin:6px 0 0 18px">${r365}</ul>
+
+    <h2 style="margin:14px 0 6px; font-size:18px">AI Opportunity Map (Impacto x Capacidade)</h2>
+    <p>Priorize iniciativas pelo alto <strong>impacto</strong> e alta <strong>capacidade atual</strong> (quadrante “Prioridade Máxima”).</p>
+    <div style="border:1px solid #e5e7eb; border-radius:8px; padding:8px">${oppCanvas.outerHTML}</div>
+    <table style="width:100%; border:1px solid #e5e7eb; border-collapse:collapse; margin-top:8px">
+      <thead><tr style="background:#f8fafc"><th style="padding:8px 10px; border-bottom:1px solid #e5e7eb">Caso</th><th style="padding:8px 10px; border-bottom:1px solid #e5e7eb">Impacto</th><th style="padding:8px 10px; border-bottom:1px solid #e5e7eb">Capacidade</th><th style="padding:8px 10px; border-bottom:1px solid #e5e7eb">Quadrante</th></tr></thead>
+      <tbody>
+        ${opps.map(o=> `<tr><td style="padding:8px 10px; border-bottom:1px solid #e5e7eb">${o.name}</td><td style="padding:8px 10px; border-bottom:1px solid #e5e7eb">${o.impact}</td><td style="padding:8px 10px; border-bottom:1px solid #e5e7eb">${o.capacity||''}</td><td style="padding:8px 10px; border-bottom:1px solid #e5e7eb">${quadrantLabel(o.impact,o.capacity||0)}</td></tr>`).join('')}
+      </tbody>
+    </table>
+
+    <h2 style="margin:14px 0 6px; font-size:18px">Como calculamos seu score</h2>
+    <p style="margin:6px 0">O setor selecionado ajusta os <strong>pesos</strong> dos pilares para refletir particularidades da indústria. O percentual por pilar é a razão entre o score obtido e o máximo ponderado. O score geral é a soma ponderada dos pilares normalizada em 0–100.</p>
+
+    <div style="margin-top:16px; padding-top:10px; border-top:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between">
+      ${brand}
+      <div style="color:#6b7280; font-size:12px">© ${new Date().getFullYear()} Heuriskien — Todos os direitos reservados</div>
+    </div>
+  `;
+
+  // fallback capacidade
+  opps.forEach(o=>{ if(o.capacity===undefined){ o.capacity=Math.round((pcts.dados+pcts.tecnologia+pcts.processos)/3); } });
+
+  const ctx=$('#oppChart').getContext('2d');
+  if(scatterInstance) scatterInstance.destroy();
+  scatterInstance = new Chart(ctx,{
+    type:'scatter',
+    data:{ datasets:[{ label:'Casos', data:opps.map(o=>({x:o.capacity,y:o.impact})), backgroundColor:'rgba(31,98,228,.75)'}]},
+    options:{ responsive:true, scales:{ x:{ title:{display:true,text:'Capacidade'}, min:0, max:100 }, y:{ title:{display:true,text:'Impacto'}, min:0, max:100 } }, plugins:{legend:{display:false}} },
+    plugins:[{ id:'quadrants', afterDraw(c){ const x=c.scales.x, y=c.scales.y, ctx=c.ctx, xMid=x.getPixelForValue(60), yMid=y.getPixelForValue(60);
+      ctx.save(); ctx.strokeStyle='#cbd5e1'; ctx.setLineDash([6,6]);
+      ctx.beginPath(); ctx.moveTo(xMid,y.top); ctx.lineTo(xMid,y.bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x.left,yMid); ctx.lineTo(x.right,yMid); ctx.stroke();
+      ctx.setLineDash([]); ctx.fillStyle='#475569'; ctx.font='12px ui-sans-serif';
+      ctx.fillText('Investimento', x.left+6, y.top+14);
+      ctx.fillText('Prioridade Máxima', xMid+6, y.top+14);
+      ctx.fillText('Baixa Prioridade', x.left+6, yMid-6);
+      ctx.fillText('Quick Wins', xMid+6, yMid-6);
+      ctx.restore(); } }]
+  });
+}
+
+/* ====== Executive 1-Pager ====== */
+function generateExecutive1Pager(rows, score100, level){
+  const setorLabel=$('#setor').selectedOptions[0]?.text || '';
+  const porteText=$('#porte').value;
+  const today=new Date().toLocaleDateString('pt-BR');
+  const pcts={}; rows.forEach(r=> pcts[r.key]=Math.round(r.pct*100));
+  const bench=getBenchmarksFor($('#setor').value || 'default', porteText);
+  const idx=strategicIndexes(pcts);
+  const idxRisk=badgeByValue(idx.risk), idxRoi=badgeByValue(idx.roi), idxAd=badgeByValue(idx.adopt);
+  const sorted=[...rows].sort((a,b)=> b.pct-a.pct);
+  const strengths=sorted.slice(0,2), gaps=sorted.slice(-2).reverse();
+
+  const benchBullets = `
+    <ul style="margin:6px 0 0 18px">
+      <li>Estratégia: ${pcts.estrategia}% vs. ${bench.estrategia}%</li>
+      <li>Dados: ${pcts.dados}% vs. ${bench.dados}%</li>
+      <li>Tecnologia: ${pcts.tecnologia}% vs. ${bench.tecnologia}%</li>
+      <li>Processos: ${pcts.processos}% vs. ${bench.processos}%</li>
+      <li>Pessoas: ${pcts.pessoas}% vs. ${bench.pessoas}%</li>
+    </ul>`;
+
+  const brand=`<div style="display:flex; align-items:center; gap:10px">
+    <div style="width:22px; height:22px; border-radius:6px; background:linear-gradient(135deg,#1f62e4,#22d3ee);"></div>
+    <div style="font-weight:800; letter-spacing:.2px">Heuriskien — AI Readiness</div>
+  </div>`;
+
+  const rep=$('#reportExecutive');
+  rep.innerHTML=`
+    <div style="display:flex; align-items:center; justify-content:space-between">
+      ${brand}
+      <div style="text-align:right; color:#374151; font-size:13px">
+        <div>Data: ${today}</div>
+        <div>Setor: ${setorLabel} · Porte: ${porteText}</div>
+      </div>
+    </div>
+    <h1 style="margin:10px 0 4px; font-size:22px; color:#0f172a">AI Readiness — Executive Summary</h1>
+    <div style="font-size:16px; color:#334155; margin-bottom:6px"><strong>Empresa:</strong> ${$('#empresa').value}</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+      <div>
+        <div style="margin-bottom:6px"><span style="background:#eef2ff; padding:2px 6px; border-radius:6px">Score</span></div>
+        <div style="font-size:28px; font-weight:800; color:#111827">${score100}</div>
+        <div style="color:#374151">Maturidade: <strong>${level}</strong></div>
+      </div>
+      <div>
+        <div style="margin-bottom:6px"><span style="background:#eef2ff; padding:2px 6px; border-radius:6px">Índices</span></div>
+        <div style="color:#374151">
+          Risco: <span class="${idxRisk.cls}"><strong>${idxRisk.txt}</strong></span> ·
+          ROI: <span class="${idxRoi.cls}"><strong>${idxRoi.txt}</strong></span> ·
+          Adoção: <span class="${idxAd.cls}"><strong>${idxAd.txt}</strong></span>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px">
+      <div><h3 style="margin:6px 0">Top Forças</h3><ul style="margin:6px 0 0 18px">${strengths.map(s=> `<li>${s.pillar}: ${(s.pct*100).toFixed(0)}%</li>`).join('')}</ul></div>
+      <div><h3 style="margin:6px 0">Principais Gaps</h3><ul style="margin:6px 0 0 18px">${gaps.map(s=> `<li>${s.pillar}: ${(s.pct*100).toFixed(0)}%</li>`).join('')}</ul></div>
+    </div>
+    <h3 style="margin:10px 0 4px">Benchmark (heurístico)</h3>
+    ${benchBullets}
+    <h3 style="margin:10px 0 4px">Próximos 90 dias</h3>
+    <ul style="margin:6px 0 0 18px">
+      <li>Foco em ${gaps.map(s=> s.pillar).join(' e ')} com plano de ação imediato;</li>
+      <li>Quick wins de automação e organização de dados críticos;</li>
+      <li>Definição de KPIs e governança mínima.</li>
+    </ul>
+    <div style="margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb; color:#6b7280; font-size:12px">
+      © ${new Date().getFullYear()} Heuriskien — Todos os direitos reservados
+    </div>
+  `;
+}
+
+/* ====== Exportações — PATCH PDF ====== */
+$('#btnCSV').addEventListener('click', ()=>{
+  const meta=collectMeta();
+  const headers=['Campo','Valor'];
+  const lines=[];
+  Object.entries(meta).forEach(([k,v])=> lines.push(`${safeCSV(k)},${safeCSV(v)}`));
+  for(let i=1;i<=25;i++){ const qId=`Q${String(i).padStart(2,'0')}`; lines.push(`${qId},${answers[qId] ?? ''}`); }
+  const csv=[headers.join(','), ...lines].join('\n');
+  downloadBlob(csv,'ai_readiness_respostas.csv','text/csv;charset=utf-8;');
+});
+$('#btnJSON').addEventListener('click', ()=>{ const data={ meta:collectMeta(), answers, setor, tema }; downloadBlob(JSON.stringify(data,null,2),'ai_readiness_respostas.json','application/json'); });
+$('#btnPrint').addEventListener('click', ()=> window.print());
+$('#btnReset').addEventListener('click', ()=>{ if(confirm('Limpar todas as respostas e começar de novo?')){ localStorage.removeItem('ai_readiness_draft_pro'); location.reload(); } });
+
+/* PDF Completo — garantir visibilidade + delay + fundo branco */
+document.getElementById('btnPDF').addEventListener('click', ()=>{
+  const el = document.getElementById('report');
+  el.style.display='block';
+  const opt = {
+    margin:[10,10,10,10],
+    filename:`Relatorio_AI_Readiness_${($('#empresa').value||'empresa').replace(/\s+/g,'_')}.pdf`,
+    image:{ type:'jpeg', quality:0.98 },
+    html2canvas:{ scale:2, useCORS:true, backgroundColor:'#ffffff' },
+    jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' },
+    pagebreak:{ mode:['css','legacy'] }
+  };
+  if(window.html2pdf){ setTimeout(()=> window.html2pdf().set(opt).from(el).save(), 300); }
+  else{ alert('Biblioteca html2pdf não carregou. Use "Imprimir / Salvar PDF".'); }
+});
+
+/* PDF 1‑Pager — mostrar temporariamente + delay */
+document.getElementById('btnPDF1').addEventListener('click', ()=>{
+  const el = document.getElementById('reportExecutive');
+  const prev=el.style.display; el.style.display='block';
+  const opt = {
+    margin:[10,10,10,10],
+    filename:`AI_Readiness_Executive_1Pager_${($('#empresa').value||'empresa').replace(/\s+/g,'_')}.pdf`,
+    image:{ type:'jpeg', quality:0.98 },
+    html2canvas:{ scale:2, useCORS:true, backgroundColor:'#ffffff' },
+    jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' }
+  };
+  if(window.html2pdf){
+    setTimeout(()=> window.html2pdf().set(opt).from(el).save().finally(()=>{ el.style.display=prev; }), 300);
+  } else { alert('Biblioteca html2pdf não carregou. Use "Imprimir / Salvar PDF".'); el.style.display=prev; }
+});
+
+/* Helpers */
+function collectMeta(){ return {
+  nome:$('#nome').value, email:$('#email').value, empresa:$('#empresa').value,
+  setor:$('#setor').selectedOptions[0]?.text || '', porte:$('#porte').value,
+  segmento:$('#segmento').value || '', obs:$('#obs').value || ''
+};}
+function safeCSV(v){ const s=String(v??''); if(s.includes(',')||s.includes('"')||s.includes('\n')) return '"'+s.replace(/"/g,'""')+'"'; return s; }
+function downloadBlob(content,filename,type){ const blob=new Blob([content],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+
+function saveDraft(){ const draft={ meta:collectMeta(), answers, setor, tema, currentSection }; localStorage.setItem('ai_readiness_draft_pro', JSON.stringify(draft)); }
+function loadDraft(){ const raw=localStorage.getItem('ai_readiness_draft_pro'); if(!raw) return;
+  try{
+    const d=JSON.parse(raw); setor=d.setor||''; tema=d.tema||''; if(tema) document.body.setAttribute('data-theme',tema); $('#tema').value=tema;
+    $('#nome').value=d.meta?.nome ?? ''; $('#email').value=d.meta?.email ?? ''; $('#empresa').value=d.meta?.empresa ?? '';
+    const so=[...$('#setor').options].find(o => o.text===d.meta?.setor || o.value===d.setor); if(so) $('#setor').value=so.value;
+    $('#porte').value=d.meta?.porte ?? ''; $('#segmento').value=d.meta?.segmento ?? ''; $('#obs').value=d.meta?.obs ?? '';
+    answers=d.answers || {};
+    Object.entries(answers).forEach(([qId,val])=>{ const el=document.getElementById(`${qId}_${val}`); if(el) el.checked=true; });
+    computeProgress();
+    if(Number.isInteger(d.currentSection)){ showOnlySection(Math.max(0,Math.min(PILLARS.length-1,d.currentSection))); }
+  }catch(e){ console.warn('Erro ao ler rascunho:', e); }
+}
+
+/* Modal de pesos */
+const weightsModal=$('#weightsModal');
+$('#btnWeights').addEventListener('click', ()=>{
+  const sect=$('#setor').value;
+  const m=WEIGHT_PRESETS_SECTOR[sect] || {estrategia:1,dados:1,tecnologia:1,processos:1,pessoas:1};
+  $('#weightsContent').innerHTML=`
+    <div style="color:#4b5563; font-size:13px; margin-top:4px">Setor atual: <strong>${$('#setor').selectedOptions[0]?.text || '—'}</strong></div>
+    <table>
+      <thead><tr><th>Pilar</th><th>Peso aplicado</th></tr></thead>
+      <tbody>
+        <tr><td>Estratégia e Governança</td><td>${m.estrategia.toFixed(1)}</td></tr>
+        <tr><td>Dados</td><td>${m.dados.toFixed(1)}</td></tr>
+        <tr><td>Tecnologia e Ferramentas</td><td>${m.tecnologia.toFixed(1)}</td></tr>
+        <tr><td>Processos e Operações</td><td>${m.processos.toFixed(1)}</td></tr>
+        <tr><td>Pessoas e Cultura</td><td>${m.pessoas.toFixed(1)}</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:8px; color:#6b7280; font-size:12px">Observação: os pesos ajustam o score máximo de cada pilar, impactando o percentual e o score geral.</p>`;
+  weightsModal.classList.add('open'); weightsModal.setAttribute('aria-hidden','false');
+});
+$('#closeWeights').addEventListener('click', ()=>{ weightsModal.classList.remove('open'); weightsModal.setAttribute('aria-hidden','true'); });
+weightsModal.addEventListener('click', (e)=>{ if(e.target===weightsModal) $('#closeWeights').click(); });
+
+/* Efeitos de entrada */
+function setupReveal(){
+  const obs=new IntersectionObserver((entries)=> entries.forEach(en=>{ if(en.isIntersecting) en.target.classList.add('in'); }), {threshold:0.08});
+  $$('.reveal').forEach(el=> obs.observe(el));
+}
+
+/* ====== Supabase — upsert (atualiza ou cria) ====== */
+function getUTM(){
+  const url=new URL(location.href), g=s=> url.searchParams.get(s)||'';
+  return { utm_source:g('utm_source'), utm_medium:g('utm_medium'), utm_campaign:g('utm_campaign'),
+           utm_term:g('utm_term'), utm_content:g('utm_content'), referrer:document.referrer||'', user_agent:navigator.userAgent||'' };
+}
+function buildLeadPayload(){
+  const meta=collectMeta(), r=window.__lastResults;
+  if(!r){ alert('Calcule o score antes de registrar o lead.'); return null; }
+  const pcts={}; r.rows.forEach(p=> pcts[p.key]=Math.round(p.pct*100));
+  const payload={
+    nome:meta.nome, email:meta.email, empresa:meta.empresa,
+    setor_key:r.setorKey, setor_label:r.setorLabel, porte:r.porte,
+    segmento:meta.segmento || null, obs:meta.obs || null, consent: !!$('#consent')?.checked,
+    score_total:r.score100, nivel:r.level,
+    p_estrategia:pcts.estrategia||0, p_dados:pcts.dados||0, p_tecnologia:pcts.tecnologia||0, p_processos:pcts.processos||0, p_pessoas:pcts.pessoas||0,
+    pesos:r.pesos, benchmark:r.benchmark, idx_risco:r.indices.risk, idx_roi:r.indices.roi, idx_adocao:r.indices.adopt,
+    ...getUTM()
+  };
+  if(!payload.consent){ alert('Por favor, marque o consentimento para contato (LGPD).'); return null; }
+  return payload;
+}
+async function saveLeadSupabase(){
+  try{
+    const btn=$('#btnLead'); if(btn){ btn.disabled=true; btn.textContent='Registrando...'; }
+    const payload=buildLeadPayload(); if(!payload){ if(btn){btn.disabled=false; btn.textContent='Registrar Lead (Supabase)'; } return; }
+
+    // UPSERT por (email, empresa) — requer UNIQUE e policy UPDATE para anon
+    const { error } = await sb.from('leads').upsert([payload], { onConflict:'email,empresa', returning:'minimal' });
+
+    if(error){ console.error(error); alert('Não foi possível registrar/atualizar o lead no momento. Tente novamente.'); }
+    else{ alert('Lead registrado/atualizado com sucesso! ✅'); localStorage.setItem('last_lead_ok','1'); }
+  }catch(err){ console.error(err); alert('Erro inesperado ao registrar/atualizar o lead.'); }
+  finally{ const btn=$('#btnLead'); if(btn){ btn.disabled=false; btn.textContent='Registrar Lead (Supabase)'; } }
+}
+document.getElementById('btnLead')?.addEventListener('click', saveLeadSupabase);
+
+/* Inicialização */
+buildForm();
+</script>
+</body>
+</html>
