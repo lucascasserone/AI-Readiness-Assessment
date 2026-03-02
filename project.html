@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Heuriskien — Executive AI Assessment</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  /* --- SISTEMA DE TEMAS (DESIGN PROFISSIONAL) --- */
+  :root {
+    /* Tema Glass (Dark Premium) - Padrão */
+    --bg: #05070a; 
+    --card: rgba(17, 20, 27, 0.8); 
+    --border: #1f242d;
+    --primary: #2563eb; 
+    --text: #f8fafc; 
+    --text-muted: #94a3b8;
+    --input-bg: #0f172a;
+    --glass-blur: blur(12px);
+  }
+
+  body.light-theme {
+    /* Tema Corporate Light */
+    --bg: #f1f5f9; 
+    --card: #ffffff; 
+    --border: #e2e8f0;
+    --primary: #2563eb; 
+    --text: #0f172a; 
+    --text-muted: #64748b;
+    --input-bg: #ffffff;
+    --glass-blur: none;
+  }
+
+  * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; transition: background 0.3s ease, color 0.3s ease; }
+  body { background: var(--bg); color: var(--text); line-height: 1.5; overflow-x: hidden; }
+  
+  .container { max-width: 850px; margin: 0 auto; padding: 40px 20px; }
+  
+  /* --- BOTÃO DE TEMA ESTILO SWITCH --- */
+  .theme-switch-wrapper {
+    position: fixed; top: 25px; right: 25px; display: flex; align-items: center; gap: 10px; z-index: 5000;
+  }
+  .theme-switch {
+    position: relative; display: inline-block; width: 44px; height: 24px;
+  }
+  .theme-switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; inset: 0; background-color: var(--border);
+    transition: .4s; border-radius: 34px; border: 1px solid var(--border);
+  }
+  .slider:before {
+    position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
+    background-color: var(--text); transition: .4s; border-radius: 50%;
+  }
+  input:checked + .slider { background-color: var(--primary); }
+  input:checked + .slider:before { transform: translateX(20px); }
+  .theme-label { font-size: 10px; font-weight: 800; letter-spacing: 1px; color: var(--text-muted); text-transform: uppercase; }
+
+  /* --- UI ELEMENTS --- */
+  .progress-bar { position: fixed; top: 0; left: 0; width: 100%; height: 4px; background: var(--border); z-index: 2000; }
+  #progress-fill { height: 100%; width: 0%; background: var(--primary); transition: width 0.4s ease; box-shadow: 0 0 10px var(--primary); }
+
+  .step-section { display: none; opacity: 0; transform: translateY(15px); }
+  .step-section.active { display: block; opacity: 1; transform: translateY(0); animation: fadeIn 0.4s ease forwards; }
+  @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
+  .card { 
+    background: var(--card); backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 20px; 
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  }
+
+  h1 { font-size: 26px; font-weight: 800; margin-bottom: 8px; }
+  .step-indicator { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; display: block; }
+  h2 { font-size: 18px; font-weight: 700; margin-bottom: 24px; }
+
+  .input-group { margin-bottom: 20px; }
+  label.field-label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
+  input, select, textarea { 
+    width: 100%; background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; color: var(--text); font-size: 14px; 
+  }
+
+  .q-row { display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px; padding: 20px 0; border-bottom: 1px solid var(--border); align-items: center; }
+  .q-text { font-size: 14px; font-weight: 600; }
+  .q-text span { font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px; font-weight: 400; }
+
+  .opt-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .opt-btn { 
+    cursor: pointer; background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; 
+    padding: 10px; text-align: center; transition: all 0.2s ease;
+  }
+  .opt-btn:hover { border-color: var(--primary); }
+  .opt-btn.selected { background: var(--primary) !important; border-color: var(--primary); color: white !important; }
+  .opt-btn input { display: none; }
+  .opt-val { display: block; font-size: 14px; font-weight: 800; }
+  .opt-lbl { display: block; font-size: 9px; text-transform: uppercase; opacity: 0.7; }
+
+  .nav-footer { display: flex; gap: 16px; margin-top: 32px; }
+  .btn { padding: 14px 28px; border-radius: 10px; font-weight: 700; cursor: pointer; border: none; font-size: 15px; flex: 1; transition: 0.3s; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+
+  #loading { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; }
+
+  /* --- REPORT PDF VIEW --- */
+  #report { display: none; background: white; color: #0f172a; padding: 50px; border-radius: 0; }
+  .roadmap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 25px; }
+  .roadmap-item { background: #f8fafc; padding: 20px; border-radius: 12px; border-top: 4px solid var(--primary); color: #334155; }
+  
+  @media print { .no-print { display: none !important; } #report { display: block !important; padding: 0; margin: 0; } }
+</style>
+</head>
+<body>
+
+<div class="theme-switch-wrapper no-print">
+  <span class="theme-label">Corporate</span>
+  <label class="theme-switch">
+    <input type="checkbox" id="theme-toggle-input" onclick="toggleTheme()">
+    <span class="slider"></span>
+  </label>
+  <span class="theme-label">Glass</span>
+</div>
+
+<div class="progress-bar"><div id="progress-fill"></div></div>
+
+<div id="loading">
+  <div class="spinner" style="border: 4px solid var(--border); border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+  <p style="margin-top: 20px; font-weight: 700; color: var(--text);">Processando Algoritmo de Maturidade...</p>
+</div>
+
+<main class="container no-print" id="assessment-container">
+  <header style="margin-bottom: 40px; text-align: center;">
+    <div style="font-weight: 900; color: var(--primary); letter-spacing: 2px; font-size: 12px; margin-bottom: 8px;">HEURISKIEN</div>
+    <h1>AI Readiness Assessment</h1>
+  </header>
+
+  <div class="step-section active" id="step-0">
+    <div class="card">
+      <span class="step-indicator">Bem-vindo</span>
+      <h2>Contexto Corporativo</h2>
+      <div class="input-group"><label class="field-label">Executivo</label><input type="text" id="f-nome" placeholder="Seu nome"></div>
+      <div class="input-group"><label class="field-label">E-mail Corporativo</label><input type="email" id="f-email" placeholder="nome@empresa.com"></div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div class="input-group"><label class="field-label">Empresa</label><input type="text" id="f-empresa" placeholder="Organização"></div>
+        <div class="input-group">
+          <label class="field-label">Setor</label>
+          <select id="f-setor">
+            <option value="varejo_moda">Varejo & Moda</option>
+            <option value="industria">Indústria 4.0</option>
+            <option value="financeiro">Financeiro</option>
+            <option value="default">Outros</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="goNext(0)" style="margin-top:10px;">Iniciar Diagnóstico →</button>
+    </div>
+  </div>
+
+  <div id="steps-container"></div>
+</main>
+
+<section id="report" class="container">
+  <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #0f172a; padding-bottom: 30px; margin-bottom: 40px;">
+    <div>
+      <h1 style="color:#0f172a; margin:0; font-size: 32px;">BLUEPRINT DE VALOR IA</h1>
+      <p id="rep-meta" style="color:#64748b; font-size: 12px; margin-top: 10px; font-weight: 600;"></p>
+    </div>
+    <div style="text-align: right; font-weight: 900; color: #2563eb; font-size: 20px;">HEURISKIEN</div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1.3fr 1fr; gap: 50px;">
+    <div>
+      <h3 style="font-size: 12px; text-transform: uppercase; margin-bottom: 20px; color: #64748b;">Mapeamento de Prontidão</h3>
+      <div style="max-width: 400px;"><canvas id="radarChart"></canvas></div>
+    </div>
+    <div>
+      <div style="background:#0f172a; color:white; padding:40px; border-radius:16px; text-align:center; margin-bottom:30px;">
+        <p style="font-size:10px; text-transform:uppercase; opacity: 0.6; margin-bottom: 5px;">Score Geral de Prontidão</p>
+        <h2 id="final-score" style="font-size:64px; color:white; margin:0; font-weight: 800;">0%</h2>
+      </div>
+      <div id="metrics-area"></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 50px;">
+    <h3 style="font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px; color: #64748b;">Roadmap Estratégico</h3>
+    <div class="roadmap-grid" id="roadmap-dynamic"></div>
+  </div>
+
+  <div class="no-print" style="margin-top: 50px; display: flex; gap: 15px;">
+    <button class="btn btn-primary" style="flex: 2;" onclick="window.print()">Exportar PDF</button>
+    <button class="btn btn-ghost" style="flex: 1;" onclick="location.reload()">Reiniciar</button>
+  </div>
+</section>
+
+<script>
+const DATA = [
+  { k: "estrategia", t: "Estratégia & Governança", h: ["Visão 2024", "Patrocínio", "Budget", "Compliance", "Ética"], q: ["Visão Estratégica sobre IA", "Apoio Direto da Liderança", "Orçamento Dedicado", "Governança Formal", "Políticas Éticas"] },
+  { k: "dados", t: "Dados & Infraestrutura", h: ["Cloud", "Higiene", "Linhagem", "Acesso", "Segurança"], q: ["Infraestrutura em Nuvem", "Qualidade dos Dados", "Governança de Dados", "Democratização do Acesso", "Segurança de Dados"] },
+  { k: "tecnologia", t: "Tecnologia & Ferramentas", h: ["LLMs", "Pipelines", "BI", "Automação", "APIs"], q: ["Uso de IA Generativa/LLMs", "Pipelines de Dados", "Dashboards de Decisão", "Automação de Processos", "Integração via APIs"] },
+  { k: "processos", t: "Processos & Operações", h: ["Agilidade", "Lean", "AI-First", "Escala", "Feedback"], q: ["Metodologias Ágeis", "Eficiência Lean", "Mentalidade AI-First", "Capacidade de Escalar", "Ciclos de Feedback"] },
+  { k: "pessoas", t: "Pessoas & Cultura", h: ["Literacia", "Upskilling", "Mindset", "Retenção", "Times"], q: ["Literacia de Dados", "Programas de IA", "Mindset de Inovação", "Retenção de Talentos", "Times Multidisciplinares"] }
+];
+
+const BENCH = { varejo_moda:[2.1,1.8,2.0,2.2,2.1], industria:[1.9,2.1,2.4,2.5,1.8], financeiro:[2.6,2.7,2.5,2.3,2.2], default:[2.0,2.0,2.0,2.0,2.0] };
+
+function toggleTheme() {
+  const isChecked = document.getElementById('theme-toggle-input').checked;
+  if (isChecked) {
+    document.body.classList.remove('light-theme');
+  } else {
+    document.body.classList.add('light-theme');
+  }
+}
+
+function init() {
+  // Padrão inicial: Light Theme (opcional, mude conforme preferência)
+  document.body.classList.add('light-theme');
+  
+  const root = document.getElementById('steps-container');
+  DATA.forEach((p, idx) => {
+    const s = document.createElement('div');
+    s.className = 'step-section'; s.id = `step-${idx+1}`;
+    let html = `<div class="card"><span class="step-indicator">Pilar ${idx+1} de 5</span><h2>${p.t}</h2>`;
+    p.q.forEach((q, qi) => {
+      const id = `${p.k}_${qi}`;
+      html += `
+        <div class="q-row">
+          <div class="q-text">${q} <span>Foco: ${p.h[qi]}</span></div>
+          <div class="opt-grid">
+            ${[0,1,2,3].map(v => `
+              <label class="opt-btn" onclick="sel(this)">
+                <input type="radio" name="${id}" value="${v}">
+                <span class="opt-val">${v}</span>
+                <span class="opt-lbl">${['Nulo','Baixo','Médio','Forte'][v]}</span>
+              </label>`).join('')}
+          </div>
+        </div>`;
+    });
+    html += `<div class="nav-footer">
+              <button class="btn btn-ghost" onclick="goPrev(${idx+1})">Voltar</button>
+              <button class="btn btn-primary" onclick="${idx === 4 ? 'finish()' : `goNext(${idx+1})`}">
+                ${idx === 4 ? 'Gerar Blueprint' : 'Próximo Pilar →'}
+              </button>
+            </div></div>`;
+    s.innerHTML = html; root.appendChild(s);
+  });
+}
+
+function sel(el) {
+  const input = el.querySelector('input');
+  input.checked = true;
+  el.parentElement.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function goNext(c) {
+  if (c === 0 && !document.getElementById('f-email').value.includes('@')) return alert("E-mail inválido.");
+  document.getElementById(`step-${c}`).classList.remove('active');
+  document.getElementById(`step-${c+1}`).classList.add('active');
+  window.scrollTo(0,0);
+  document.getElementById('progress-fill').style.width = ((c+1)/5 * 100) + '%';
+}
+
+function goPrev(c) {
+  document.getElementById(`step-${c}`).classList.remove('active');
+  document.getElementById(`step-${c-1}`).classList.add('active');
+}
+
+function finish() {
+  // Verificação de preenchimento
+  let complete = true;
+  DATA.forEach(p => {
+    for(let i=0; i<5; i++) {
+      if(!document.querySelector(`input[name="${p.k}_${i}"]:checked`)) complete = false;
+    }
+  });
+  if(!complete) return alert("Por favor, responda todas as questões antes de gerar o blueprint.");
+
+  // ESCONDE O FORMULÁRIO COMPLETAMENTE
+  document.getElementById('assessment-container').style.display = 'none';
+  document.getElementById('loading').style.display = 'flex';
+
+  setTimeout(() => {
+    const res = {}; let total = 0;
+    DATA.forEach(p => {
+      let s = 0;
+      for(let i=0; i<5; i++) s += parseInt(document.querySelector(`input[name="${p.k}_${i}"]:checked`).value);
+      res[p.k] = s/5; total += res[p.k];
+    });
+    render(res, (total/15)*100);
+  }, 1800);
+}
+
+function render(res, score) {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('report').style.display = 'block';
+  document.getElementById('final-score').innerText = Math.round(score) + "%";
+  document.getElementById('rep-meta').innerText = `${document.getElementById('f-empresa').value.toUpperCase()} | ${new Date().toLocaleDateString()}`;
+  
+  // Roadmap dinâmico simples
+  document.getElementById('roadmap-dynamic').innerHTML = `
+    <div class="roadmap-item"><h4>90 Dias</h4><p>Saneamento de bases críticas e workshop executivo.</p></div>
+    <div class="roadmap-item"><h4>180 Dias</h4><p>Implementação de POCs de IA Generativa.</p></div>
+    <div class="roadmap-item"><h4>365 Dias</h4><p>Escalabilidade de modelos e governança madura.</p></div>
+  `;
+
+  new Chart(document.getElementById('radarChart'), {
+    type: 'radar',
+    data: {
+      labels: DATA.map(d => d.t.split(' ')[0]),
+      datasets: [
+        { label: 'Sua Empresa', data: Object.values(res), borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)', borderWidth: 3 },
+        { label: 'Benchmark', data: BENCH[document.getElementById('f-setor').value] || BENCH.default, borderColor: '#cbd5e1', borderDash: [5,5] }
+      ]
+    },
+    options: { 
+        scales: { r: { min: 0, max: 3, ticks: { display: false } } },
+        plugins: { legend: { position: 'bottom' } }
+    }
+  });
+}
+
+init();
+</script>
+</body>
+</html>
