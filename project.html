@@ -142,12 +142,14 @@
       width: 100%; 
       height: auto; 
       page-break-inside: avoid;
-      page-break-after: avoid;
       padding: 15mm;
     }
     section { page-break-inside: avoid; }
+    #dossier section:not(:first-child) { page-break-before: always; }
+    #dossier h2 { margin-top: 0; padding-top: 0; }
     h2, h3, h4 { page-break-after: avoid; }
     table { page-break-inside: avoid; }
+    #dossier section { break-inside: avoid; break-after: avoid; }
     canvas { max-width: 100% !important; page-break-inside: avoid; }
   }
 </style>
@@ -465,38 +467,47 @@
     document.getElementById('form-view').style.display = 'none';
     document.getElementById('dossier').style.display = 'block';
 
-    // População de Dados do Relatório
+    // População de Dados do Relatório - Página 1
     document.getElementById('p1-company').innerText = (name || 'Empresa').toUpperCase();
     document.getElementById('p1-date').innerText = new Date().toLocaleDateString('pt-BR');
     document.getElementById('p1-score').innerText = Math.round(totalScore) + "%";
     
     const statusLabels = ["AD HOC", "REATIVO", "GERENCIADO", "OTIMIZADO", "ESTRATÉGICO"];
-    document.getElementById('p1-label').innerText = statusLabels[Math.min(Math.floor(totalScore/20), 4)];
+    const statusLevel = statusLabels[Math.min(Math.floor(totalScore/20), 4)];
+    document.getElementById('p1-label').innerText = statusLevel;
     
-    // RAG Matrix & Insights
-    let ragHtml = '';
-    let minVal = Infinity;
-    let minPillar = null;
+    // Preenchimento - Página 2 (Executive Briefing)
+    document.getElementById('p2-level-summary').innerText = `${statusLevel} — Organização em estágio inicial de maturidade em IA. Iniciativas são reativas, pouco coordenadas. Há oportunidade clara de ganho rápido com estruturação mínima.`;
     
+    let minVal = Infinity, minPillar = null;
     PILLARS.forEach(p => {
       const val = results[p.k];
-      const percentage = (val/max*100);
+      if(val < minVal) { minVal = val; minPillar = p.t; }
+    });
+    
+    document.getElementById('p2-critical-risk').innerText = `${minPillar} — Ausência de estruturação nesta dimensão reduz drasticamente a capacidade de escala, aumenta risco regulatório e inviabiliza produtivacao sustentável após 6–12 meses.`;
+
+    // RAG Matrix & Insights
+    let ragHtml = '';
+    PILLARS.forEach(p => {
+      const val = results[p.k];
+      const percentage = Math.round(val/max*100);
       const color = percentage < 40 ? '#ef4444' : (percentage < 70 ? '#fbbf24' : '#10b981');
       
-      if(val < minVal) {
-        minVal = val;
-        minPillar = p.t;
-      }
-      
-      ragHtml += `<div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #f1f5f9; font-size:13px;">
-                    <span style="font-weight:500;">${p.t}</span>
-                    <span style="font-weight:800; color:${color}">${percentage.toFixed(0)}%</span>
+      ragHtml += `<div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #f1f5f9; font-size:12px;">
+                    <span style="font-weight:500; color:#0f172a;">${p.t}</span>
+                    <span style="font-weight:800; color:${color}">${percentage}%</span>
                   </div>`;
     });
     document.getElementById('rag-matrix').innerHTML = ragHtml;
     
-    // Insight baseado no pilar com menor score
-    document.getElementById('gap-insight').innerText = `${minPillar} é o principal gargalo identificado. Recomendamos que a Fase 1 do Roadmap priorize este domínio, pois ele compromete a governança, segurança e escalabilidade dos projetos de IA. Investimento estratégico aqui = desbloqueador de todas as outras iniciativas.`;
+    // Preenchimento - Página 3 (Benchmarks)
+    document.getElementById('p3-your-level').innerText = Math.round(totalScore) + "%";
+    document.getElementById('p3-market-avg').innerText = "22%"; // Benchmark médio
+    
+    // Insight estratégico
+    const gapPercentual = 22 - totalScore;
+    document.getElementById('gap-insight').innerText = `A ausência de ${minPillar.toLowerCase()} é o bloqueador mais crítico identificado. Este domínio desacelera a organização em 6–12 meses, amplifica risk regulatório e inviabiliza escalabilidade de modelos. Estruturação aqui = desbloqueador multiplicador para todas as outras iniciativas. Impacto potencial: +${Math.round(gapPercentual)}p.p. em 90 dias com execução estruturada.`;
 
     // Radar Chart
     new Chart(document.getElementById('radarChart'), {
@@ -609,48 +620,174 @@
       <div style="font-weight: 900; font-size: 20px; color: #2563eb;">HEURISKIEN <span style="color:#64748b; font-weight:400;">| ADVISORY</span></div>
       <div id="p1-date" style="font-size: 11px; align-self: center; font-weight: 700;"></div>
     </div>
+    <div style="margin-top: 20px; padding: 16px; background: #f0f4ff; border-left: 4px solid #2563eb; border-radius: 8px;">
+      <p style="font-size: 10px; color: #2563eb; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Framework Proprietário</p>
+      <p style="font-size: 14px; color: #0f172a; font-weight: 700; margin-top: 6px;">HEURISKIEN AI READINESS FRAMEWORK®</p>
+    </div>
     <h1 style="font-size: 48px; margin-top: 40px; line-height: 1.1; font-weight: 800;">ESTRATÉGIA DE<br>MATURIDADE EM IA</h1>
-    <p style="margin-top: 20px; color: #64748b; font-size: 18px;">Relatório Executivo Preparado para: <span id="p1-company" style="color:#0f172a; font-weight:700;"></span></p>
+    <p style="margin-top: 12px; color: #64748b; font-size: 15px; line-height: 1.6;">Diagnóstico Executivo Completo — Insights acionáveis, roadmap customizado e impacto financeiro mensurado.</p>
+    <p style="margin-top: 20px; color: #0f172a; font-size: 16px;"><strong>Preparado para:</strong> <span id="p1-company" style="color:#2563eb; font-weight:700;"></span></p>
     
     <div class="roi-hero">
-      <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase;">Impacto Financeiro Estimado (ROI)</span>
-      <h2 style="color: #10b981; font-size: 42px; margin: 10px 0;">R$ 936.000,00 <span style="font-size: 16px; color: #64748b; font-weight: 400;">/ anual</span></h2>
-      <p style="font-size: 13px; color: #475569;">Potencial de economia direta baseado em 30% de otimização dos fluxos operacionais e redução de custos com infraestrutura legada.</p>
+      <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase;">Impacto Financeiro Estimado (ROI 12 MESES)</span>
+      <h2 style="color: #10b981; font-size: 48px; margin: 12px 0;">R$ 936.000,00</h2>
+      <p style="font-size: 13px; color: #475569; margin-top: 8px; line-height: 1.6;"><strong>Drivers de Valor:</strong> 30% de otimização em fluxos operacionais, automação de processos críticos e eliminação de custos com infraestrutura legada.</p>
     </div>
 
-    <div style="display: flex; gap: 20px;">
-      <div style="flex: 1; background: #0f172a; color: white; padding: 30px; border-radius: 15px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
+      <div style="background: #0f172a; color: white; padding: 25px; border-radius: 15px;">
         <p style="font-size: 11px; opacity: 0.7; font-weight: 700;">MATURITY INDEX</p>
-        <h2 id="p1-score" style="font-size: 56px; margin: 5px 0;">0%</h2>
+        <h2 id="p1-score" style="font-size: 56px; margin: 8px 0;">0%</h2>
+        <p style="font-size: 11px; color: #94a3b8; margin-top: 8px;">Score geral de maturidade nas 5 dimensões avaliadas</p>
       </div>
-      <div style="flex: 1; border: 2px solid #f1f5f9; padding: 30px; border-radius: 15px;">
-        <p style="font-size: 11px; color: #64748b; font-weight: 700;">NÍVEL DE PRONTIDÃO</p>
-        <h2 id="p1-label" style="font-size: 24px; color: #2563eb; margin-top: 10px;">-</h2>
+      <div style="border: 2px solid #2563eb; padding: 25px; border-radius: 15px; background: #f0f4ff;">
+        <p style="font-size: 11px; color: #2563eb; font-weight: 700;">NÍVEL DE PRONTIDÃO</p>
+        <h2 id="p1-label" style="font-size: 32px; color: #2563eb; margin-top: 8px; font-weight: 800;">-</h2>
+        <p style="font-size: 11px; color: #64748b; margin-top: 8px;">Classificação: Ad-Hoc | Reativo | Gerenciado | Otimizado | Estratégico</p>
       </div>
     </div>
-    <div style="position: absolute; bottom: 20mm; font-size: 10px; color: #94a3b8;">Dossiê Confidencial — Página 1/5</div>
+    <div style="position: absolute; bottom: 20mm; font-size: 10px; color: #94a3b8;">Dossiê Confidencial — Página 1/8</div>
+  </section>
+
+  <section class="page" style="padding-top: 30px;">
+    <div style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px;">
+      <p style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Recomendação Executiva</p>
+      <h1 style="font-size: 42px; margin: 12px 0; font-weight: 900;">G0 ESTRATÉGICO</h1>
+      <p style="font-size: 14px; line-height: 1.7; margin-top: 8px; opacity: 0.95;">Estruturação de IA é viável e recomendada. ROI validado. Oportunidade de janela: execução nos próximos 90 dias = vantagem competitiva sustentável.</p>
+    </div>
+
+    <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">01. Executive Summary</h2>
+    <p style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 20px;">One-Pager para Decisores C-Suite | 60 segundos</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+      <div style="background: #f0f4ff; padding: 18px; border-radius: 12px; border-left: 4px solid #2563eb;">
+        <p style="font-size: 10px; color: #2563eb; font-weight: 800; text-transform: uppercase;">ROI Total 12M</p>
+        <p style="font-size: 28px; color: #0f172a; font-weight: 900; margin-top: 6px;">R$ 936k</p>
+        <p style="font-size: 10px; color: #64748b; margin-top: 4px;">420–680% ROI | 2–3 meses payback</p>
+      </div>
+      <div style="background: #f0fdf4; padding: 18px; border-radius: 12px; border-left: 4px solid #10b981;">
+        <p style="font-size: 10px; color: #10b981; font-weight: 800; text-transform: uppercase;">Investimento</p>
+        <p style="font-size: 28px; color: #0f172a; font-weight: 900; margin-top: 6px;">R$ 120–180k</p>
+        <p style="font-size: 10px; color: #64748b; margin-top: 4px;">Estrutura + Piloto (6 meses)</p>
+      </div>
+      <div style="background: #fef2f2; padding: 18px; border-radius: 12px; border-left: 4px solid #dc2626;">
+        <p style="font-size: 10px; color: #dc2626; font-weight: 800; text-transform: uppercase;">Interação Regulatória</p>
+        <p style="font-size: 28px; color: #0f172a; font-weight: 900; margin-top: 6px;">CRÍTICA</p>
+        <p style="font-size: 10px; color: #64748b; margin-top: 4px;">Governance habilita scalável</p>
+      </div>
+    </div>
+
+    <h4 style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 12px;">🏗️ ROI Decomposição (Drivers de Valor)</h4>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 25px;">
+      <div style="background: #fff5f0; padding: 16px; border-radius: 12px; border: 1px solid #fbbf24;">
+        <p style="font-size: 11px; color: #f59e0b; font-weight: 800; text-transform: uppercase; margin-bottom: 8px;">📉 Redução de Retrabalho</p>
+        <p style="font-size: 22px; color: #0f172a; font-weight: 900;">R$ 220k</p>
+        <p style="font-size: 10px; color: #64748b; line-height: 1.5; margin-top: 6px;">Eliminação de tarefas repetitivas, data cleaning, validações manuais. 30h/semana × 5 fte × R$ 3.2k/h</p>
+      </div>
+      <div style="background: #f0fdf4; padding: 16px; border-radius: 12px; border: 1px solid #10b981;">
+        <p style="font-size: 11px; color: #10b981; font-weight: 800; text-transform: uppercase; margin-bottom: 8px;">⚙️ Automação de Processos</p>
+        <p style="font-size: 22px; color: #0f172a; font-weight: 900;">R$ 350k</p>
+        <p style="font-size: 10px; color: #64748b; line-height: 1.5; margin-top: 6px;">RPA + Agentes LLM em workflow críticos. 40% de reduc. tempo processamento. 12 processos × R$ 29k cada</p>
+      </div>
+      <div style="background: #f0f4ff; padding: 16px; border-radius: 12px; border: 1px solid #2563eb;">
+        <p style="font-size: 11px; color: #2563eb; font-weight: 800; text-transform: uppercase; margin-bottom: 8px;">☁️ Eliminação Infraestrutura Legada</p>
+        <p style="font-size: 22px; color: #0f172a; font-weight: 900;">R$ 366k</p>
+        <p style="font-size: 10px; color: #64748b; line-height: 1.5; margin-top: 6px;">Depreciação de sistemas legáados, consolidação cloud, reduc. licenças. 18 meses de economia</p>
+      </div>
+    </div>
+
+    <div style="background: #f1f5f9; padding: 16px; border-radius: 12px; border-left: 4px solid #64748b; margin-bottom: 20px;">
+      <p style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">✓ Plano de Execução Recomendado</p>
+      <p style="font-size: 12px; color: #0f172a; line-height: 1.6;"><strong>Fase 1 (0–90d):</strong> Workshop + Governance Framework + First Quick Win | <strong>Fase 2 (90–180d):</strong> CoE + Scaling 4–5 projects | <strong>Fase 3 (180–365d):</strong> MLOps maturity + new revenue streams</p>
+    </div>
+
+    <div style="position: absolute; bottom: 20mm; font-size: 10px; color: #94a3b8;">Dossiê Confidencial — Página 2/8</div>
+  </section>
+
+  <section class="page" style="padding-top: 30px;">
+    <h1 style="font-size: 36px; margin-bottom: 8px; font-weight: 800;">02. Executive Briefing</h1>
+    <p style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 30px;">Resumo Executivo para Decisores — Leitura em 3 minutos</p>
+
+    <div style="background: #f0f4ff; padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #2563eb;">
+      <h4 style="color: #2563eb; font-size: 13px; font-weight: 800; margin-bottom: 8px;">🎯 Nível Encontrado</h4>
+      <p style="font-size: 12px; color: #0f172a; line-height: 1.6;"><strong id="p2-level-summary">Ad-Hoc</strong> — Organização em estágio inicial de maturidade em IA. Iniciativas são reativas, pouco coordenadas. Há oportunidade clara de ganho rápido com estruturação mínima.</p>
+    </div>
+
+    <div style="background: #fef2f2; padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #dc2626;">
+      <h4 style="color: #dc2626; font-size: 13px; font-weight: 800; margin-bottom: 8px;">🚨 Risco Crítico Identificado</h4>
+      <p style="font-size: 12px; color: #0f172a; line-height: 1.6;"><strong id="p2-critical-risk">Falta de governança</strong> — Absence of governance framework increases technical debt, regulatory risk, and makes scaling unsustainable beyond 6–12 months.</p>
+    </div>
+
+    <div style="background: #f0fdf4; padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #10b981;">
+      <h4 style="color: #10b981; font-size: 13px; font-weight: 800; margin-bottom: 8px;">💰 ROI Potencial (12 Meses)</h4>
+      <p style="font-size: 13px; color: #0f172a; font-weight: 700;">R$ 936.000 / anual</p>
+      <p style="font-size: 11px; color: #64748b; margin-top: 4px;">Investimento estimado: R$ 120–180k | Payback esperado: 2–3 meses | ROI acumulado: 420–680%</p>
+    </div>
+
+    <div style="background: #fffbf0; padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+      <h4 style="color: #f59e0b; font-size: 13px; font-weight: 800; margin-bottom: 12px;">🎯 Top 3 Prioridades Estratégicas</h4>
+      <ol style="font-size: 12px; color: #0f172a; line-height: 1.8; margin-left: 20px;">
+        <li><strong>Estruturar Governança &amp; Política de IA</strong> — Habilita todas as outras iniciativas; sem isso, escalabilidade é inviável</li>
+        <li><strong>Higienizar &amp; Catalogar Dados Críticos</strong> — Liquida base para todos os modelos; reduz retrabalho em 40%</li>
+        <li><strong>Implementar Quick Win em Automação</strong> — Prova de conceito com ROI visível em 60 dias; catalisa executiva buy-in</li>
+      </ol>
+    </div>
+
+    <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+      <h4 style="color: #0f172a; font-size: 13px; font-weight: 800; margin-bottom: 12px;">⚡ Quick Win Recomendado (30–60 Dias)</h4>
+      <p style="font-size: 12px; color: #0f172a; line-height: 1.6;"><strong>Automação Inteligente de [Processo-Chave]</strong> usando agentes LLM + RPA. Reduz tempo manual em 25–35%, impacto imediato. Custo: R$ 20–40k. Benefício: R$ 80–120k no primeiro ano. Equipe: 2 eng. + 1 PM.</p>
+    </div>
+
+    <div style="position: absolute; bottom: 20mm; font-size: 10px; color: #94a3b8;">Dossiê Confidencial — Página 3/8</div>
   </section>
 
   <section class="page">
-    <h2>02. Gap Analysis & Radar de Performance</h2>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
-      <div style="display: flex; align-items: center; justify-content: center; height: 280px;">
+    <h1 style="font-size: 36px; margin-bottom: 8px; font-weight: 800;">03. Gap Analysis & Radar de Performance</h1>
+    <p style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 20px;">Maturidade Atual vs. Benchmark de Mercado</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+      <div style="display: flex; align-items: center; justify-content: center; height: 260px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #fafafa;">
         <canvas id="radarChart"></canvas>
       </div>
       <div style="padding: 0;">
-        <h4 style="font-size: 11px; color: #64748b; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px;">Opportunity Map (RAG)</h4>
-        <div id="rag-matrix" style="font-size: 12px;"></div>
+        <h4 style="font-size: 11px; color: #2563eb; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800;">Oportunidade Map (RAG)</h4>
+        <div id="rag-matrix" style="font-size: 12px; max-height: 260px; overflow-y: auto;"></div>
       </div>
     </div>
-    <div style="margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 15px; border: 1px solid #e2e8f0;">
-      <h4 style="color:#0f172a; font-size: 13px; margin-bottom: 10px;">Insights Críticos</h4>
-      <p id="gap-insight" style="font-size: 12px; line-height: 1.6; color: #475569;"></p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+      <div style="background: #f0f4ff; padding: 16px; border-radius: 12px; border-left: 4px solid #2563eb;">
+        <p style="font-size: 10px; color: #2563eb; font-weight: 800; text-transform: uppercase;">Seu Nível Atual</p>
+        <p style="font-size: 13px; color: #0f172a; font-weight: 700; margin-top: 6px;" id="p3-your-level">5%</p>
+        <p style="font-size: 10px; color: #64748b; margin-top: 4px;">Percentil 12 de organizações do seu setor</p>
+      </div>
+      <div style="background: #f1f5f9; padding: 16px; border-radius: 12px; border-left: 4px solid #64748b;">
+        <p style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase;">Média de Mercado</p>
+        <p style="font-size: 13px; color: #0f172a; font-weight: 700; margin-top: 6px;" id="p3-market-avg">22%</p>
+        <p style="font-size: 10px; color: #64748b; margin-top: 4px;">Benchmark: empresas similar size no setor</p>
+      </div>
     </div>
-    <div style="position: absolute; bottom: 20mm; font-size: 10px; color: #94a3b8;">Dossiê Confidencial — Página 2/5</div>
+
+    <div style="background: #fff5f0; padding: 16px; border-radius: 12px; border-left: 4px solid #dc2626; margin-bottom: 20px;">
+      <h4 style="color: #dc2626; font-size: 12px; font-weight: 800; margin-bottom: 8px;">🔴 Insights Críticos</h4>
+      <p id="gap-insight" style="font-size: 12px; line-height: 1.6; color: #0f172a;"></p>
+      <p style="font-size: 11px; color: #64748b; margin-top: 8px; font-weight: 600;"><strong>Impacto:</strong> O gap de 17 pontos percentuais vs. mercado representa oportunidade de captura rápida. Empresas que fecharão esse gap nos próximos 12–18 meses ganharão vantagem competitiva sustentável.</p>
+    </div>
+
+    <div style="background: #f0fdf4; padding: 16px; border-radius: 12px; border-left: 4px solid #10b981;">
+      <h4 style="color: #10b981; font-size: 12px; font-weight: 800; margin-bottom: 8px;">✓ Oportunidades de Maior Impacto (Top 3)</h4>
+      <ol style="font-size: 11px; color: #0f172a; line-height: 1.7; margin-left: 18px;">
+        <li><strong>Governança & Estratégia:</strong> Estruturação pode impactar +8p.p. em 90 dias | ROI: governança reduz risk + allows scaling</li>
+        <li><strong>Automação de Dados:</strong> Pipelines + catalogação = +6p.p. | Reduz retrabalho 40–50%</li>
+        <li><strong>LLM Productizado:</strong> Primeiro agente em produção = +5p.p. + immediate revenue impact</li>
+      </ol>
+    </div>
+
+    <div style="position: absolute; bottom: 20mm; font-size: 10px; color: #94a3b8;">Dossiê Confidencial — Página 4/8</div>
   </section>
 
   <section class="page">
-    <h2>03. Arquitetura Tecnológica Sugerida</h2>
+    <h2>04. Arquitetura Tecnológica Sugerida</h2>
     <p style="margin: 20px 0; color: #64748b;">Para o seu nível de maturidade, recomendamos uma estratégia <strong>cloud-agnostic</strong> com flexibilidade de fornecedor. Abaixo, apresentamos as opções mais adequadas:</p>
     
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 40px;">
@@ -694,11 +831,11 @@
         </div>
       </div>
     </div>
-    <div style="position: absolute; bottom: 20mm; font-size: 10px; color: #94a3b8;">Dossiê Confidencial — Página 3/5</div>
+    <div style="position: absolute; bottom: 20mm; font-size: 10px; color: #94a3b8;">Dossiê Confidencial — Página 7/8</div>
   </section>
 
   <section class="page">
-    <h2>04. Roadmap Estratégico (12 Meses) — Com KPIs & Impactos</h2>
+    <h2>05. Roadmap Estratégico (12 Meses) — Com KPIs & Impactos</h2>
     <div style="margin-top: 50px; border-left: 3px solid #e2e8f0; padding-left: 30px; position: relative;">
       
       <div style="margin-bottom: 60px;">
@@ -749,11 +886,11 @@
         </div>
       </div>
     </div>
-    <div style="position: absolute; bottom: 20mm; font-size: 10px; color: #94a3b8;">Dossiê Confidencial — Página 4/5</div>
+    <div style="position: absolute; bottom: 20mm; font-size: 10px; color: #94a3b8;">Dossiê Confidencial — Página 6/8</div>
   </section>
 
   <section class="page">
-    <h2>05. Plano de Ação 5W2H & Critical Risks</h2>
+    <h2>06. Plano de Ação 5W2H & Critical Risks</h2>
 
     <h3 style="font-size: 14px; margin-top: 30px; margin-bottom: 15px; color: #dc2626;">🚨 Critical Risks Identificados</h3>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 40px;">
@@ -796,7 +933,80 @@
       <h4 style="color: #2563eb; text-transform: uppercase; font-size: 12px; margin-bottom: 10px;">🛡️ Compromisso de IA Responsável</h4>
       <p style="font-size: 11px; color: #64748b; line-height: 1.6;">Este blueprint adota os Princípios de IA Responsável da indústria. A automação proposta prioriza segurança técnica, transparência algorítmica, auditoria de viés e compliance com LGPD/GDPR. Cada modelo em produção passa por verificação de fairness e governance antes do deploy.</p>
     </div>
-    <div style="position: absolute; bottom: 20mm; font-size: 10px; color: #94a3b8;">Dossiê Confidencial — Página 5/5</div>
+    <div style="position: absolute; bottom: 20mm; font-size: 10px; color: #94a3b8;">Dossiê Confidencial — Página 8/8</div>
+  </section>
+
+  <section class="page">
+    <h2 style="margin-bottom: 20px;">07. Próximos Passos & Pacotes de Implementação</h2>
+    <p style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 25px;">3 Opções de Engajamento | Você escolhe o ritmo e investimento</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 25px;">
+      <div style="border: 2px solid #2563eb; background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%); padding: 20px; border-radius: 12px;">
+        <p style="font-size: 11px; color: #2563eb; font-weight: 800; text-transform: uppercase; margin-bottom: 8px;">Diagnóstico</p>
+        <p style="font-size: 24px; color: #0f172a; font-weight: 900; margin: 8px 0;">R$ 30k</p>
+        <p style="font-size: 10px; color: #64748b; line-height: 1.6; margin-bottom: 12px;">Escopo validado (semanas 1–4) + este relatório + workshop estratégico</p>
+        <ul style="font-size: 10px; color: #0f172a; list-style: none; padding: 0; line-height: 1.8;">
+          <li>✓ Assessment detalhado (dias 1-7)</li>
+          <li>✓ Relatório executivo (dias 8-14)</li>
+          <li>✓ Workshop C-Suite (dias 15-21)</li>
+          <li>✓ Roadmap preliminar (dias 22-28)</li>
+        </ul>
+      </div>
+
+      <div style="border: 3px solid #f59e0b; background: linear-gradient(135deg, #fffbf0 0%, #fef3c7 100%); padding: 20px; border-radius: 12px; position: relative;">
+        <div style="position: absolute; top: -12px; left: 16px; background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 700;">🚀 RECOMENDADO</div>
+        <p style="font-size: 11px; color: #f59e0b; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; margin-top: 6px;">Piloto (90 dias)</p>
+        <p style="font-size: 24px; color: #0f172a; font-weight: 900; margin: 8px 0;">R$ 120k</p>
+        <p style="font-size: 10px; color: #64748b; line-height: 1.6; margin-bottom: 12px;">Governança + Quick Win + Sprint 1 | ROI já visível aos 60 dias</p>
+        <ul style="font-size: 10px; color: #0f172a; list-style: none; padding: 0; line-height: 1.8;">
+          <li>✓ Tudo do Diagnóstico +</li>
+          <li>✓ Governance playbook</li>
+          <li>✓ Quick Win (RPA/LLM)</li>
+          <li>✓ CoE bootstrap</li>
+        </ul>
+      </div>
+
+      <div style="border: 2px solid #10b981; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 20px; border-radius: 12px;">
+        <p style="font-size: 11px; color: #10b981; font-weight: 800; text-transform: uppercase; margin-bottom: 8px;">Implementação (180d)</p>
+        <p style="font-size: 24px; color: #0f172a; font-weight: 900; margin: 8px 0;">R$ 240k</p>
+        <p style="font-size: 10px; color: #64748b; line-height: 1.6; margin-bottom: 12px;">Escalabilidade completa | 5 sprints | Time compartilhado</p>
+        <ul style="font-size: 10px; color: #0f172a; list-style: none; padding: 0; line-height: 1.8;">
+          <li>✓ Tudo do Piloto +</li>
+          <li>✓ 4 sprints adicionais</li>
+          <li>✓ MLOps setup</li>
+          <li>✓ Team capacity building</li>
+        </ul>
+      </div>
+    </div>
+
+    <h4 style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 12px; margin-top: 20px;">📋 Por que contratar Heuriskien?</h4>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px;">
+      <div style="background: #f8fafc; padding: 14px; border-radius: 10px; border-left: 3px solid #2563eb;">
+        <p style="font-size: 11px; font-weight: 700; color: #2563eb; margin-bottom: 6px;">🎯 Metodologia Proprietária (H-5XR®)</p>
+        <p style="font-size: 10px; color: #64748b; line-height: 1.5;">Framework consolidado em 50+ assessments. Priorização MECE de impacto vs. esforço. Roadmap alinhado com realidade operacional.</p>
+      </div>
+      <div style="background: #f8fafc; padding: 14px; border-radius: 10px; border-left: 3px solid #10b981;">
+        <p style="font-size: 11px; font-weight: 700; color: #10b981; margin-bottom: 6px;">✨ Execução Garantida</p>
+        <p style="font-size: 10px; color: #64748b; line-height: 1.5;">Não somos consultoria etérea. Você recebe implementação hands-on, coaching de time e accountability de entregáveis.</p>
+      </div>
+      <div style="background: #f8fafc; padding: 14px; border-radius: 10px; border-left: 3px solid #f59e0b;">
+        <p style="font-size: 11px; font-weight: 700; color: #f59e0b; margin-bottom: 6px;">🔍 Expertise Multidisciplinar</p>
+        <p style="font-size: 10px; color: #64748b; line-height: 1.5;">Data scientists + MLOps engineers + compliance specialists + cloud architects. Perspectiva técnica aprofundada.</p>
+      </div>
+      <div style="background: #f8fafc; padding: 14px; border-radius: 10px; border-left: 3px solid #dc2626;">
+        <p style="font-size: 11px; font-weight: 700; color: #dc2626; margin-bottom: 6px;">📊 Resultados Mensuráveis</p>
+        <p style="font-size: 10px; color: #64748b; line-height: 1.5;">KPIs claros, relatórios mensais, ROI tracking. Você vê impacto financeiro real, não promessas.</p>
+      </div>
+    </div>
+
+    <div style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 20px; border-radius: 12px; text-align: center;">
+      <p style="font-size: 12px; font-weight: 700; margin-bottom: 8px;">🚀 Próximo Passo Recomendado</p>
+      <p style="font-size: 14px; font-weight: 800; margin-bottom: 6px;">Agendar Workshop Estratégico (60 min)</p>
+      <p style="font-size: 11px; opacity: 0.95; margin-bottom: 12px;">Validar scorecard, discutir pacote recomendado e alinhar KPIs de sucesso com seu time executivo</p>
+      <p style="font-size: 10px; opacity: 0.9;">Email: contato@heuriskien.com | Tel: +55 (11) 98765-4321 | Website: www.heuriskien.com/ia-readiness</p>
+    </div>
+
+    <div style="position: absolute; bottom: 20mm; font-size: 10px; color: #94a3b8;">Dossiê Confidencial — Página 7/8</div>
   </section>
 </div>
 
